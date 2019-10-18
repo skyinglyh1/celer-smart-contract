@@ -178,6 +178,52 @@ namespace PayResolver
         public delegate object DynamicCallContract(string method, object[] args);
 
 
+        [DisplayName("resolvePayment")]
+        public static event Action<byte[], BigInteger, BigInteger> ResolvePayment;
+
+
+        public static Object Main(string operation, params object[] args)
+        {
+            if (Runtime.Trigger == TriggerType.Verification)
+            {
+                return true;
+            }
+            else if (Runtime.Trigger == TriggerType.Application)
+            {
+                if (operation == "init")
+                {
+                    assert(args.Length == 2, "PayResolver parameter error");
+                    byte[] revPayRegistryAddr = (byte[])args[0];
+                    byte[] revVirtResolverAddr = (byte[])args[1];
+                    return init(revPayRegistryAddr, revVirtResolverAddr);
+                }
+                if (operation == "getPayRegistryHash")
+                {
+                    return getVirtResolverHash();
+                }
+                if (operation == "getPayRegistryHash")
+                {
+                    return getVirtResolverHash();
+                }
+                if (operation == "resolvePaymentByConditions")
+                {
+                    assert(args.Length == 1, "PayResolver parameter error");
+                    byte[] resolvePayRequestBs = (byte[])args[0];
+                    return resolvePaymentByConditions(resolvePayRequestBs);
+                }
+                if (operation == "resolvePaymentByVouchedResult")
+                {
+                    assert(args.Length == 1, "PayResolver parameter error");
+                    byte[] vouchedPayResultBs = (byte[])args[0];
+                    return resolvePaymentByVouchedResult(vouchedPayResultBs);
+                }
+                return false;
+            }
+        }
+
+
+
+
         [DisplayName("init")]
         public static object init(byte[] revPayRegistryAddr, byte[] revVirtResolverAddr)
         {
@@ -187,24 +233,129 @@ namespace PayResolver
             Storage.Put(Storage.CurrentContext, VirtResolverHashKey, revVirtResolverAddr);
             return true;
         }
+        
+        [DisplayName("getVirtResolverHash")]
+        public static byte[] getVirtResolverHash()
+        {
+            byte[] payRegistryHash = Storage.Get(Storage.CurrentContext, VirtResolverHashKey);
+            assert(_isLegalAddress(payRegistryHash), "empty pay registry contract hash");
+            return payRegistryHash;
+        }
 
-        public static resolvePaymentByConditions(byte[] resolvePayRequestBs)
+        [DisplayName("getPayRegistryHash")]
+        public static byte[] getPayRegistryHash()
+        {
+            byte[] payRegistryHash = Storage.Get(Storage.CurrentContext, PayRegistryHashKey);
+            assert(_isLegalAddress(payRegistryHash), "empty pay registry contract hash");
+            return payRegistryHash;
+        }
+
+        [DisplayName("resolvePaymentByConditions")]
+        public static object resolvePaymentByConditions(byte[] resolvePayRequestBs)
         {
             ResolvePayByConditionsRequest resolvePayRequest = new ResolvePayByConditionsRequest();
             resolvePayRequest = Helper.Deserialize(resolvePayRequestBs) as ResolvePayByConditionsRequest;
             ConditionalPay pay = Helper.Deserialize(resolvePayRequest.condPay) as ConditionalPay;
             byte funcType = pay.transferFunc.logicType;
-            BigInteger amount;
+            BigInteger amount = 0;
             TransferFunctionType TransferFunctionType = getTransferFunctionType();
             if (funcType == TransferFunctionType.BOOLEAN_AND)
             {
                 amount = _calculateBooleanAndPayment(pay, resolvePayRequest.hashPreimages);
+            }else if (funcType == TransferFunctionType.BOOLEAN_OR)
+            {
+                amount = _calculateBooleanOrPayment(pay, resolvePayRequest.hashPreimages);
+            } else if (_isNumericLogic(funcType))
+            {
+                amount = _calculateNumericLogicPayment(pay, resolvePayRequest.hashPreimages, funcType);
+            }else
+            {
+                assert(false, "error");
             }
+            byte[] payHash = SmartContract.Sha256(resolvePayRequest.condPay);
+            _resolvePayment(pay, payHash, amount);
+            return true;
         }
+
+        [DisplayName("resolvePaymentByVouchedResult")]
+        public static object resolvePaymentByVouchedResult(byte[] vouchedPayResultBs)
+        {
+            VouchedCondPayResult vouchedPayResult = new VouchedCondPayResult();
+            vouchedPayResult = Helper.Deserialize(vouchedPayResultBs) as VouchedCondPayResult;
+            CondPayResult payResult = Helper.Deserialize(vouchedPayResult.condPayResult) as CondPayResult;
+            ConditionalPay pay = Helper.Deserialize(payResult.condPay) as ConditionalPay;
+
+            assert(payResult.amount <= pay.transferFunc.maxTransfer.receiver.amt, "exceed max transfer amount");
+            byte[] hash = SmartContract.Sha256(vouchedPayResult.condPayResult);
+            bool srcVerifiedRes = SmartContract.VerifySignature(hash, vouchedPayResult.sigOfSrc, pay.src);
+            bool destVerifiedRes = SmartContract.VerifySignature(hash, vouchedPayResult.sigOfDest, pay.dest);
+            assert(srcVerifiedRes && destVerifiedRes, "verify signature failed");
+
+            byte[] payHash = SmartContract.Sha256(payResult.condPay);
+
+            _resolvePayment(pay, payHash, payResult.amount);
+
+            return true;
+        }
+
+
+        public static void _resolvePayment(ConditionalPay _pay, byte[] _payHash, BigInteger _amount)
+        {
+            assert(_amount >= 0, "amount is less than zero");
+
+            BigInteger now = Blockchain.GetHeader(Blockchain.GetHeight()).Timestamp;
+            assert(now <= _pay.resolveDeadline, "passed pay resolve deadline in condPay msg");
+
+            byte[] payId = _calculatePayId(_payHash, ExecutionEngine.ExecutingScriptHash);
+
+            byte[] payRegistryHash = getPayRegistryHash();
+            DynamicCallContract dyncall = (DynamicCallContract)payRegistryHash.ToDelegate();
+            BigInteger[] res = (BigInteger[]) dyncall("getPayInfo", new object[] { payId });
+            BigInteger currentAmt = res[0];
+            BigInteger currentDeadline = res[1];
+
+            assert(
+                currentDeadline == 0 || now <= currentDeadline,
+                "Passed onchain resolve pay deadline"
+                );
+            if (currentDeadline > 0)
+            {
+                assert(_amount > currentAmt, "New amount is not larger");
+                if (_amount == _pay.transferFunc.maxTransfer.receiver.amt)
+                {
+                    
+                    assert((bool)dyncall("setPayInfo", new object[] { _payHash, _amount, now}), "setPayInfo error");
+                    ResolvePayment(payId, _amount, now);
+                }
+                else
+                {
+                    assert((bool)dyncall("setPayAmount", new object[] { _payHash, _amount }), "setPayAmount error");
+                    ResolvePayment(payId, _amount, currentDeadline);
+                }
+            }
+            else
+            {
+                BigInteger newDeadline = 0;
+                if (_amount == _pay.transferFunc.maxTransfer.receiver.amt)
+                {
+                    newDeadline = now;
+                }
+                else
+                {
+                    newDeadline = min(now + _pay.resolveTimeout, _pay.resolveDeadline);
+                    assert(newDeadline > 0, "new resolve deadline is not greater than 0");
+                }
+                
+                assert((bool)dyncall("setPayInfo", new object[] { _payHash, _amount, newDeadline }), "setPayInfo error");
+                ResolvePayment(payId, _amount, currentDeadline);
+            }
+
+        }
+
 
         private static BigInteger _calculateBooleanAndPayment(ConditionalPay _pay, byte[][] _preimages)
         {
-            BigInteger j = 0;
+            int j = 0;
             bool hasFalseContractCond = false;
             ConditionType ConditionType = getConditionType();
             for (var i = 0; i < _pay.conditions.Length; i++)
@@ -212,7 +363,7 @@ namespace PayResolver
                 Condition cond = _pay.conditions[i];
                 if (cond.conditionType == ConditionType.HASH_LOCK)
                 {
-                    assert(SmartContract.Sha256(_preimages[i]) == cond.hashLock, "wrong preimage");
+                    assert(SmartContract.Sha256(_preimages[j]) == cond.hashLock, "wrong preimage");
                     j++;
                 }
                 else if (
@@ -223,7 +374,8 @@ namespace PayResolver
                     byte[] booleanCondHash = _getCondAddress(cond);
                     DynamicCallContract dyncall = (DynamicCallContract)booleanCondHash.ToDelegate();
                     assert((bool)dyncall("isFinalized", new object[] { cond.argsQueryFinalization }), "Condition is not finalized");
-                    bool outcome = (bool)dyncall("getOutcome", new object[] { cond.argsQueryOutcome }){
+                    bool outcome = (bool)dyncall("getOutcome", new object[] { cond.argsQueryOutcome });
+                    if (outcome){
                         hasFalseContractCond = true;
                     }
                 }
@@ -243,11 +395,128 @@ namespace PayResolver
         }
 
 
+        private static BigInteger _calculateBooleanOrPayment(ConditionalPay _pay, byte[][] _preimages)
+        {
+            int j = 0;
+            bool hasContracCond = false;
+            bool hasTrueContractCond = false;
+            ConditionType ConditionType = getConditionType();
+            for (var i = 0; i < _pay.conditions.Length; i++)
+            {
+                Condition cond = _pay.conditions[i];
+                if (cond.conditionType == ConditionType.HASH_LOCK)
+                {
+                    assert(SmartContract.Sha256(_preimages[j]) == cond.hashLock, "wrong preimage");
+                    j++;
+                }
+                else if (
+                   cond.conditionType == ConditionType.DEPLOYED_CONTRACT ||
+                   cond.conditionType == ConditionType.VIRTUAL_CONTRACT
+                   )
+                {
+                    byte[] booleanCondHash = _getCondAddress(cond);
+                    DynamicCallContract dyncall = (DynamicCallContract)booleanCondHash.ToDelegate();
+                    assert((bool)dyncall("isFinalized", new object[] { cond.argsQueryFinalization }), "Condition is not finalized");
+                    hasContracCond = true;
 
+                    bool outcome = (bool)dyncall("getOutcome", new object[] { cond.argsQueryOutcome });
+                    if (outcome)
+                    {
+                        hasTrueContractCond = true;
+                    }
+                }
+                else
+                {
+                    assert(false, "condition type error");
+                }
+            }
+            if (!hasContracCond || hasTrueContractCond)
+            {
+                return _pay.transferFunc.maxTransfer.receiver.amt;
+            }
+            else
+            {
+                return 0;
+            }
+        }
 
+        private static BigInteger _calculateNumericLogicPayment(ConditionalPay _pay, byte[][] _preimages, byte _funcType)
+        {
+            int j = 0;
+            BigInteger amount = 0;
+            bool hasContracCond = false;
+            ConditionType ConditionType = getConditionType();
+            TransferFunctionType TransferFunctionType = getTransferFunctionType();
+            for (var i = 0; i < _pay.conditions.Length; i++)
+            {
+                Condition cond = _pay.conditions[i];
+                if (cond.conditionType == ConditionType.HASH_LOCK)
+                {
+                    assert(SmartContract.Sha256(_preimages[j]) == cond.hashLock, "wrong preimage");
+                    j++;
+                }
+                else if (
+                   cond.conditionType == ConditionType.DEPLOYED_CONTRACT ||
+                   cond.conditionType == ConditionType.VIRTUAL_CONTRACT
+                   )
+                {
+                    byte[] numericCondHash = _getCondAddress(cond);
+                    DynamicCallContract dyncall = (DynamicCallContract)numericCondHash.ToDelegate();
+                    assert((bool)dyncall("isFinalized", new object[] { cond.argsQueryFinalization }), "Condition is not finalized");
 
+                    BigInteger outcome = (BigInteger)dyncall("getOutcome", new object[] { cond.argsQueryOutcome });
 
+                    if (_funcType == TransferFunctionType.NUMERIC_ADD)
+                    {
+                        amount = amount + outcome;
+                    }else if (_funcType == TransferFunctionType.NUMERIC_MAX)
+                    {
+                        amount = max(amount, outcome);
+                    }
+                    else if (_funcType == TransferFunctionType.NUMERIC_MIN)
+                    {
+                        if (hasContracCond)
+                        {
+                            amount = min(amount, outcome);
+                        }
+                        else
+                        {
+                            amount = outcome;
+                        }
+                        
+                    }
+                    else
+                    {
+                        assert(false, "error");
+                    }
+                    hasContracCond = true;
+                }
+                else
+                {
+                    assert(false, "condition type error");
+                }
+            }
+            if (hasContracCond)
+            {
+                assert(amount <= _pay.transferFunc.maxTransfer.receiver.amt, "exceed max transfer amount");
+                return amount;
+            }
+            else
+            {
+                return _pay.transferFunc.maxTransfer.receiver.amt;
+            }
+        }
 
+        private static bool _isNumericLogic(byte _funcType)
+        {
+            TransferFunctionType TransferFunctionType = getTransferFunctionType();
+            return _funcType == TransferFunctionType.NUMERIC_ADD || _funcType == TransferFunctionType.NUMERIC_MAX || _funcType == TransferFunctionType.NUMERIC_MIN;
+        }
+
+        private static byte[] _calculatePayId(byte[] _payHash, byte[] _setter)
+        {
+            return SmartContract.Sha256(_payHash.Concat(_setter));
+        }
 
 
 
@@ -315,6 +584,19 @@ namespace PayResolver
         }
 
 
+        private static BigInteger max(BigInteger a, BigInteger b)
+        {
+            assert(a >= 0 && b >= 0, "value is less than zero");
+            if (a >= b) return a;
+            return b;
+        }
+
+        private static BigInteger min(BigInteger a, BigInteger b)
+        {
+            assert(a >= 0 && b >= 0, "value is less than zero");
+            if (a <= b) return a;
+            return b;
+        }
 
         private static void assert(bool condition, string msg)
         {

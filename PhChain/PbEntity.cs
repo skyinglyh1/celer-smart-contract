@@ -184,7 +184,7 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            ti.tokenType = (UInt16)(raw.Range(seek, len).AsBigInteger());
+            ti.tokenType = (UInt16)(raw.Range(seek, len).AsBigInteger());//Why BigInteger?
             assert(ti.tokenType <= getTokenType().GAS, "tokenType illegal");
             seek += len;
 
@@ -200,7 +200,7 @@ namespace PbEntity
         public struct TokenDistribution
         {
             public UInt16 token;
-            public AccountAmtPair[] distribution;
+            public AccountAmtPair[] distribution;//Why array?
         }
         public static TokenDistribution decTokenDistribution(byte[] raw)
         {
@@ -218,6 +218,7 @@ namespace PbEntity
             seek += 2;
             while (seek < raw.Length)
             {
+                //Why not decAccountAmtPair?
                 int disIndex = 0;
                 AccountAmtPair aap = new AccountAmtPair();
                 len = (int)raw.Range(seek, 2).AsBigInteger();
@@ -279,11 +280,12 @@ namespace PbEntity
             seek += 2;
             pil.payIds = new byte[][] { };
             //TODO payId物理意义是什么？
+            //Answer: The globally unique ID of a conditional payment is computed through the payment hash concatenated with the resolver address(https://www.celer.network/docs/celercore/channel/pay_contracts.html).
             int s = 0;
             int i = 0;
             while (s < len)
             {
-                pil.payIds[i] = raw.Range(seek + s, 32);
+                pil.payIds[i] = raw.Range(seek + s, 32);//Why only here 32 bits are read? Some other messages also contain type-bytes32 fields
                 s += 32;
                 i = i + 1;
             }
@@ -439,7 +441,7 @@ namespace PbEntity
             public BigInteger payTimestamp;
             public byte[] src;
             public byte[] dest;
-            public ConditionalPay[] conditions;
+            public ConditionalPay[] conditions;//Should be type Condition?
             public TransferFunction transferFunc;
             public BigInteger resolveDeadline;
             public BigInteger resolveTimeout;
@@ -467,6 +469,7 @@ namespace PbEntity
             cp.dest = raw.Range(seek, len);
             seek += len;
 
+            //Should read len here
             int s = seek;
             int i = 0;
             int l = 0;
@@ -474,11 +477,11 @@ namespace PbEntity
             {
                 l = (int)raw.Range(seek, 2).AsBigInteger();
                 s += 2;
-                cp.conditions[i] = decConditionalPay(raw.Range(s, l));
+                cp.conditions[i] = decConditionalPay(raw.Range(s, l));//Should be func decCondition
                 s += l;
                 i = i + 1;
             }
-            seek += len;
+            seek += len;//Should be wrong
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
@@ -663,6 +666,7 @@ namespace PbEntity
             csi.seqNum = raw.Range(seek, len).AsBigInteger();
             seek += len;
 
+            //Should read len
             int s = seek;
             int i = 0;
             int l = 0;
@@ -674,7 +678,7 @@ namespace PbEntity
                 s += l;
                 i = i + 1;
             }
-            seek += len;
+            seek += len;//Should be wrong
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;

@@ -17,7 +17,7 @@ namespace NEP5
 
 
         private static readonly string Name = "NEP5Token";
-        private static readonly string Symbol = "N5T";
+        private static readonly string Symbol = "N5T";//Due to NEP-5, only capital letters are allowed
         private static readonly BigInteger Factor = 100000000;
         private static readonly BigInteger Decimals = 8;
         private static readonly BigInteger InitialSupply = 100000000;
@@ -138,7 +138,7 @@ namespace NEP5
         public static BigInteger balanceOf(byte[] address)
         {
             assert(_isLegalAddress(address), "address is illegal");
-            return Storage.Get(Storage.CurrentContext, BalancePrefix.Concat(address)).AsBigInteger();
+            return Storage.Get(Storage.CurrentContext, BalancePrefix.Concat(address)).AsBigInteger();//Address not recorded should be with balance 0.
         }
 
         [DisplayName("allowance")]
@@ -146,7 +146,7 @@ namespace NEP5
         {
             assert(_isLegalAddress(owner), "owner is illegal");
             assert(_isLegalAddress(spender), "spender is illegal");
-            return Storage.Get(Storage.CurrentContext, ApprovePrefix.Concat(owner).Concat(spender)).AsBigInteger();
+            return Storage.Get(Storage.CurrentContext, ApprovePrefix.Concat(owner).Concat(spender)).AsBigInteger();//Addresses not recorded should be with allowence 0.
         }
 
         [DisplayName("transfer")]
@@ -237,7 +237,7 @@ namespace NEP5
         }
         private static bool _isLegalAddress(byte[] addr)
         {
-            return addr.Length == 0 && addr != AddressZero;
+            return addr.Length == 0 && addr != AddressZero;//Account address's length should be 20, this func is not right. Other contracts are also with the same problem.
         }
     }
 }

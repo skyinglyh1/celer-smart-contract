@@ -6,13 +6,10 @@ using Helper = Neo.SmartContract.Framework.Helper;
 using System.ComponentModel;
 using Neo.SmartContract.Framework.Services.System;
 
-
-
 namespace VirtContractResolver
 {
     public class VirtContractResolver : SmartContract
     {
-
         // byte23 -> address
         //public Map<byte[], byte[]> virtToRealMap;
         public static readonly byte[] Virt2RealPrefix = "virtToRealMap".AsByteArray();
@@ -20,7 +17,6 @@ namespace VirtContractResolver
 
         [DisplayName("deploy")]
         public static event Action<byte[]> Deploy;
-
 
         public static Object Main(string operation, params object[] args)
         {
@@ -46,8 +42,6 @@ namespace VirtContractResolver
             }
             return false;
         }
-
-
 
         [DisplayName("deploy")]
         public static bool deploy(byte[] avmCode, BigInteger nonce)
@@ -82,9 +76,7 @@ namespace VirtContractResolver
             byte[] storedVirtAddr = Storage.Get(Storage.CurrentContext, Virt2RealPrefix.Concat(virtHashId));
             assert(_isLegalAddress(storedVirtAddr), "nonexistent virtual address");
             return storedVirtAddr;
-
         }
-
 
         private static void assert(bool condition, string msg)
         {
@@ -95,7 +87,7 @@ namespace VirtContractResolver
         }
         private static bool _isLegalAddress(byte[] addr)
         {
-            return addr.Length == 0 && addr != AddressZero;
+            return addr.Length == 20 && addr != AddressZero;
         }
     }
 }

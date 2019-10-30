@@ -25,6 +25,7 @@ namespace LedgerStruct
             cs.Migrated = 4;
             return cs;
         }
+
         public struct PeerState
         {
             public BigInteger seqNum;
@@ -41,6 +42,7 @@ namespace LedgerStruct
             public BigInteger withdrawal;
             public PeerState state;
         }
+
         public struct WithdrawIntent
         {
             public byte[] receiver;
@@ -54,7 +56,8 @@ namespace LedgerStruct
             public UInt16 tokenType;
             public byte[] address;
         }
-        public struct Chanenl
+
+        public struct Channel
         {
             public BigInteger settleFinalizedTime;
             public BigInteger disputeTimeout;
@@ -73,9 +76,7 @@ namespace LedgerStruct
             public byte[] celerWallet;
             public Map<byte[], BigInteger> balanceLimits;
             public bool balanceLimitsEnabled;
-            public Map<byte[], Chanenl> channelMap;
+            public Map<byte[], Channel> channelMap;
         }
-
-
     }
 }

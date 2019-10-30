@@ -9,6 +9,8 @@ namespace PbEntity
 {
     public class PbEntity : SmartContract
     {
+        private const int addressLength = 20;
+
         public static bool assert(bool condition, string msg)
         {
             if (condition)
@@ -20,6 +22,7 @@ namespace PbEntity
                 throw new Exception((msg.HexToBytes().Concat(" not support".HexToBytes())).AsString());
             }
         }
+
         public struct TokenType
         {
             public UInt16 INVALID;
@@ -73,8 +76,6 @@ namespace PbEntity
             return ct;
         }
 
-
-
         // Length is 2 byte means the maximum length of each type raw data is 2^16 = 1 MB
         public struct Type2Mark
         {
@@ -85,16 +86,6 @@ namespace PbEntity
             public byte[] ArraY;
             public byte[] MaP;
             public byte[] InterfacE;
-        }
-        public struct Type2Len
-        {
-            public int IntegeR;
-            public int BooleaN;
-            public int StrinG;
-            public int BytearraY;
-            public int ArraY;
-            public int MaP;
-            public int InterfacE;
         }
         public static Type2Mark getTypeMark()
         {
@@ -107,6 +98,17 @@ namespace PbEntity
             t2m.MaP = new byte[] { 0x04 };
             t2m.InterfacE = new byte[] { 0x04 };
             return t2m;
+        }
+
+        public struct Type2Len
+        {
+            public int IntegeR;
+            public int BooleaN;
+            public int StrinG;
+            public int BytearraY;
+            public int ArraY;
+            public int MaP;
+            public int InterfacE;
         }
         public static Type2Len getTypeLen()
         {
@@ -144,8 +146,6 @@ namespace PbEntity
         //    return true;
         //}
 
-
-
         public struct AccountAmtPair
         {
             public byte[] account;
@@ -158,7 +158,7 @@ namespace PbEntity
             int len = 0;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
-            assert(len == 20, "account length error");
+            assert(len == addressLength, "account length error");
             seek += 2;
             aap.account = raw.Range(seek, len);
             seek += len;
@@ -166,6 +166,7 @@ namespace PbEntity
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
             aap.amt = raw.Range(seek, len).AsBigInteger();
+            assert(aap.amt >= 0, "amt error");
             seek += len;
             assert(raw.Length == seek, "decAccountAmtPair raw data illegal");
             return aap;
@@ -184,13 +185,13 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            ti.tokenType = (UInt16)(raw.Range(seek, len).AsBigInteger());//Why BigInteger?
+            ti.tokenType = (UInt16)(raw.Range(seek, len).AsBigInteger());
             assert(ti.tokenType <= getTokenType().GAS, "tokenType illegal");
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == 20, "address illegal");
+            assert(len == addressLength, "address illegal");
             ti.address = raw.Range(seek, len);
             seek += len;
             assert(raw.Length == seek, "decTokenInfo raw data illegal");
@@ -200,7 +201,7 @@ namespace PbEntity
         public struct TokenDistribution
         {
             public UInt16 token;
-            public AccountAmtPair[] distribution;//Why array?
+            public AccountAmtPair[] distribution;
         }
         public static TokenDistribution decTokenDistribution(byte[] raw)
         {
@@ -215,30 +216,20 @@ namespace PbEntity
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
+            assert(len >= 0, "distribution illegal");
             seek += 2;
-            while (seek < raw.Length)
+            td.distribution = new AccountAmtPair[len];
+
+            for (int i = 0; i < len; i++)
             {
-                //Why not decAccountAmtPair?
-                int disIndex = 0;
-                AccountAmtPair aap = new AccountAmtPair();
-                len = (int)raw.Range(seek, 2).AsBigInteger();
-                assert(len == 20, "account length error");
+                int k = (int)raw.Range(seek, 2).AsBigInteger();
                 seek += 2;
-                aap.account = raw.Range(seek, len);
-                seek += len;
-
-                len = (int)raw.Range(seek, 2).AsBigInteger();
-                seek += 2;
-                aap.amt = raw.Range(seek, len).AsBigInteger();
-                seek += len;
-
-                td.distribution[disIndex] = aap;
-                disIndex += 1;
+                td.distribution[i] = decAccountAmtPair(raw.Range(seek, k));
+                seek += k;
             }
             assert(raw.Length == seek, "decTokenDistribution raw data illegal");
             return td;
         }
-
 
         public struct TokenTransfer
         {
@@ -277,29 +268,26 @@ namespace PbEntity
             int len = 0;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
+            assert(len >= 0, "payIds illegal");
             seek += 2;
-            pil.payIds = new byte[][] { };
-            //TODO payId物理意义是什么？
-            //Answer: The globally unique ID of a conditional payment is computed through the payment hash concatenated with the resolver address(https://www.celer.network/docs/celercore/channel/pay_contracts.html).
-            int s = 0;
-            int i = 0;
-            while (s < len)
+            pil.payIds = new byte[len][];
+            for (int i = 0; i < len; i++)
             {
-                pil.payIds[i] = raw.Range(seek + s, 32);//Why only here 32 bits are read? Some other messages also contain type-bytes32 fields
-                s += 32;
-                i = i + 1;
+                int k = (int)raw.Range(seek, 2).AsBigInteger();
+                seek += 2;
+                assert(k == 32, "payIds " + i + " illegal");
+                pil.payIds[i] = raw.Range(seek, k);
+                seek += k;
             }
-            seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == 20, "nextListHash illegal");
-            pil.nextListHash = raw.Range(seek + s, 32);
+            assert(len == 32, "nextListHash illegal");
+            pil.nextListHash = raw.Range(seek, len);
             seek += len;
             assert(raw.Length == seek, "decPayIdList raw data illegal");
             return pil;
         }
-
 
         public struct SimplexPaymentChannel
         {
@@ -325,11 +313,12 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == 20, "peerFrom illegal");
+            assert(len == addressLength, "peerFrom illegal");
             spc.peerFrom = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
+            assert(len >= 0, "seqNum illegal");
             seek += 2;
             spc.seqNum = raw.Range(seek, len).AsBigInteger();
             seek += len;
@@ -345,13 +334,15 @@ namespace PbEntity
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
+            assert(len >= 0, "lastPayResolveDeadline illegal");
             seek += 2;
-            spc.lastPayResolveDeadline = (BigInteger)raw.Range(seek, len).AsBigInteger();
+            spc.lastPayResolveDeadline = raw.Range(seek, len).AsBigInteger();
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
+            assert(len >= 0, "totalPendingAmount illegal");
             seek += 2;
-            spc.totalPendingAmount = (BigInteger)raw.Range(seek, len).AsBigInteger();
+            spc.totalPendingAmount = raw.Range(seek, len).AsBigInteger();
             seek += len;
 
             assert(raw.Length == seek, "decSimplexPaymentChannel raw data illegal");
@@ -406,16 +397,19 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == 32, "hashLock illegal");
             c.hashLock = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == addressLength, "deployedContractAddress illegal");
             c.deployedContractAddress = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == 32, "virtualContractAddress illegal");
             c.virtualContractAddress = raw.Range(seek, len);
             seek += len;
 
@@ -433,15 +427,12 @@ namespace PbEntity
             return c;
         }
 
-
-
-
         public struct ConditionalPay
         {
             public BigInteger payTimestamp;
             public byte[] src;
             public byte[] dest;
-            public ConditionalPay[] conditions;//Should be type Condition?
+            public Condition[] conditions;
             public TransferFunction transferFunc;
             public BigInteger resolveDeadline;
             public BigInteger resolveTimeout;
@@ -461,27 +452,28 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == addressLength, "src illegal");
             cp.src = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == addressLength, "dest illegal");
             cp.dest = raw.Range(seek, len);
             seek += len;
 
-            //Should read len here
-            int s = seek;
-            int i = 0;
-            int l = 0;
-            while (s < len)
+            len = (int)raw.Range(seek, 2).AsBigInteger();
+            assert(len >= 0, "conditions illegal");
+            seek += 2;
+            cp.conditions = new Condition[len];
+
+            for (int i = 0; i < len; i++)
             {
-                l = (int)raw.Range(seek, 2).AsBigInteger();
-                s += 2;
-                cp.conditions[i] = decConditionalPay(raw.Range(s, l));//Should be func decCondition
-                s += l;
-                i = i + 1;
+                int k = (int)raw.Range(seek, 2).AsBigInteger();
+                seek += 2;
+                cp.conditions[i] = decCondition(raw.Range(seek, k));
+                seek += k;
             }
-            seek += len;//Should be wrong
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
@@ -500,6 +492,7 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == addressLength, "payResolver illegal");
             cp.payResolver = raw.Range(seek, len);
             seek += len;
 
@@ -579,6 +572,7 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == 32, "channelId illegal");
             cwi.channelId = raw.Range(seek, len);
             seek += len;
 
@@ -599,6 +593,7 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == 32, "recipientChannelId illegal");
             cwi.recipientChannelId = raw.Range(seek, len);
             seek += len;
 
@@ -658,6 +653,7 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == 32, "channelId illegal");
             csi.channelId = raw.Range(seek, len);
             seek += len;
 
@@ -666,19 +662,18 @@ namespace PbEntity
             csi.seqNum = raw.Range(seek, len).AsBigInteger();
             seek += len;
 
-            //Should read len
-            int s = seek;
-            int i = 0;
-            int l = 0;
-            while (s < len)
+            len = (int)raw.Range(seek, 2).AsBigInteger();
+            assert(len >= 0, "settleBalance illegal");
+            seek += 2;
+            csi.settleBalance = new AccountAmtPair[len];
+
+            for (int i = 0; i < len; i++)
             {
-                l = (int)raw.Range(seek, 2).AsBigInteger();
-                s += 2;
-                csi.settleBalance[i] = decAccountAmtPair(raw.Range(s, l));
-                s += l;
-                i = i + 1;
+                int k = (int)raw.Range(seek, 2).AsBigInteger();
+                seek += 2;
+                csi.settleBalance[i] = decAccountAmtPair(raw.Range(seek, k));
+                seek += k;
             }
-            seek += len;//Should be wrong
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
@@ -705,16 +700,19 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == 32, "channelId illegal");
             cmi.channelId = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == addressLength, "fromLedgerAddress illegal");
             cmi.fromLedgerAddress = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
+            assert(len == addressLength, "toLegerAddress illegal");
             cmi.toLegerAddress = raw.Range(seek, len);
             seek += len;
 
@@ -726,12 +724,6 @@ namespace PbEntity
             assert(raw.Length == seek, "decPaymentChannelInitializer raw data illegal");
             return cmi;
         }
-
-
-
-
-
-
 
         //public static object Main(string operation, object[] args)
         //{

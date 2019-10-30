@@ -14,10 +14,8 @@ namespace NEP5
         [DisplayName("approve")]
         public static event Action<byte[], byte[], BigInteger> Approved;
 
-
-
         private static readonly string Name = "NEP5Token";
-        private static readonly string Symbol = "N5T";//Due to NEP-5, only capital letters are allowed
+        private static readonly string Symbol = "NVT";
         private static readonly BigInteger Factor = 100000000;
         private static readonly BigInteger Decimals = 8;
         private static readonly BigInteger InitialSupply = 100000000;
@@ -31,7 +29,6 @@ namespace NEP5
         //private static Map<byte[], Map<byte[], BigInteger>> allowed;
         private static readonly byte[] BalancePrefix = "balance".AsByteArray();
         private static readonly byte[] ApprovePrefix = "approve".AsByteArray();
-
 
         public static Object Main(string operation, params object[] args)
         {
@@ -67,13 +64,6 @@ namespace NEP5
                     byte[] address = (byte[])args[0];
                     return balanceOf(address);
                 }
-                if (operation == "allowance")
-                {
-                    assert(args.Length == 2, "NEP5 parameter error");
-                    byte[] owner = (byte[])args[0];
-                    byte[] spender = (byte[])args[1];
-                    return allowance(owner, spender);
-                }
                 if (operation == "transfer")
                 {
                     assert(args.Length == 3, "NEP5 parameter error");
@@ -86,23 +76,6 @@ namespace NEP5
                 {
                     return transferMulti(args);
                 }
-                if (operation == "approve")
-                {
-                    assert(args.Length == 3, "NEP5 parameter error");
-                    byte[] owner = (byte[])args[0];
-                    byte[] spender = (byte[])args[1];
-                    BigInteger amount = (BigInteger)args[2];
-                    return approve(owner, spender, amount);
-                }
-                if (operation == "transferFrom")
-                {
-                    assert(args.Length == 3, "NEP5 parameter error");
-                    byte[] spender = (byte[])args[0];
-                    byte[] from = (byte[])args[1];
-                    byte[] to = (byte[])args[2];
-                    BigInteger amount = (BigInteger)args[3];
-                    return transferFrom(spender, from, to, amount);
-                }
             }
             return false;
         }
@@ -111,7 +84,7 @@ namespace NEP5
         [DisplayName("init")]
         public static object init()
         {
-            assert(totalSupply() > 0, "contract has already been initilaized");
+            assert(totalSupply() == 0, "contract has already been initilaized");
             BigInteger supply = Factor * InitialSupply;
             Storage.Put(Storage.CurrentContext, TotalSupplyKey, supply);
             Storage.Put(Storage.CurrentContext, BalancePrefix.Concat(Admin), supply);
@@ -138,15 +111,7 @@ namespace NEP5
         public static BigInteger balanceOf(byte[] address)
         {
             assert(_isLegalAddress(address), "address is illegal");
-            return Storage.Get(Storage.CurrentContext, BalancePrefix.Concat(address)).AsBigInteger();//Address not recorded should be with balance 0.
-        }
-
-        [DisplayName("allowance")]
-        public static BigInteger allowance(byte[] owner, byte[] spender)
-        {
-            assert(_isLegalAddress(owner), "owner is illegal");
-            assert(_isLegalAddress(spender), "spender is illegal");
-            return Storage.Get(Storage.CurrentContext, ApprovePrefix.Concat(owner).Concat(spender)).AsBigInteger();//Addresses not recorded should be with allowence 0.
+            return Storage.Get(Storage.CurrentContext, BalancePrefix.Concat(address)).AsBigInteger();
         }
 
         [DisplayName("transfer")]
@@ -185,49 +150,6 @@ namespace NEP5
             return true;
         }
 
-
-        [DisplayName("approve")]
-        public static object approve(byte[] owner, byte[] spender, BigInteger amount)
-        {
-            assert(_isLegalAddress(owner), "owner address is illegal");
-            assert(_isLegalAddress(spender), "spender address is illegal");
-            assert(amount >= 0, "amount is less than 0");
-
-            assert(Runtime.CheckWitness(owner), "CheckWitness failed");
-
-            assert(amount <= balanceOf(owner), "amount is greater than balance of owner");
-
-            Storage.Put(Storage.CurrentContext, ApprovePrefix.Concat(owner).Concat(spender), amount);
-
-            Approved(owner, spender, amount);
-            return true;
-        }
-
-        [DisplayName("transferFrom")]
-        public static object transferFrom(byte[] spender, byte[] from, byte[] to, BigInteger amount)
-        {
-            assert(_isLegalAddress(spender), "spender address is illegal");
-            assert(_isLegalAddress(from), "from address is illegal");
-            assert(_isLegalAddress(to), "to address is illegal");
-            assert(amount >= 0, "amount is less than 0");
-
-            assert(Runtime.CheckWitness(spender), "CheckWitness failed");
-
-            BigInteger approvedBalance = allowance(from, spender);
-            BigInteger fromBalance = balanceOf(from);
-            BigInteger toBalance = balanceOf(to);
-            assert(amount <= approvedBalance, "amount is greater than allowance of spender allowed to spend");
-            assert(amount <= fromBalance, "amount is greater than the owner's balance");
-
-            Storage.Put(Storage.CurrentContext, BalancePrefix.Concat(from), fromBalance - amount);
-            Storage.Put(Storage.CurrentContext, BalancePrefix.Concat(to), toBalance + amount);
-            Storage.Put(Storage.CurrentContext, ApprovePrefix.Concat(from).Concat(spender), approvedBalance - amount);
-
-            Transferred(from, to, amount);
-            return true;
-        }
-
-
         private static void assert(bool condition, string msg)
         {
             if (!condition)
@@ -237,7 +159,7 @@ namespace NEP5
         }
         private static bool _isLegalAddress(byte[] addr)
         {
-            return addr.Length == 0 && addr != AddressZero;//Account address's length should be 20, this func is not right. Other contracts are also with the same problem.
+            return addr.Length == 20 && addr != AddressZero;
         }
     }
 }

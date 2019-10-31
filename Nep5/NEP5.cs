@@ -11,9 +11,6 @@ namespace NEP5
         [DisplayName("transfer")]
         public static event Action<byte[], byte[], BigInteger> Transferred;
 
-        [DisplayName("approve")]
-        public static event Action<byte[], byte[], BigInteger> Approved;
-
         private static readonly string Name = "NEP5Token";
         private static readonly string Symbol = "NVT";
         private static readonly BigInteger Factor = 100000000;

@@ -6,8 +6,6 @@ using System.ComponentModel;
 using Helper = Neo.SmartContract.Framework.Helper;
 using Neo.SmartContract.Framework.Services.System;
 
-
-
 namespace AssetPool
 {
     public class AssetPool : SmartContract
@@ -21,10 +19,8 @@ namespace AssetPool
         [DisplayName("approve")]
         public static event Action<byte[], byte[], BigInteger> Approved;
 
-        private static readonly string Name = "NEP5Pool";
-        private static readonly string Symbol = "N5P";
-        private static readonly BigInteger Decimals = 8;
-        private static readonly BigInteger InitialSupply = 100000000;
+        private static readonly string Name = "NEP5Pool";//¿Podría ser como un parámetro de inicialización?
+        private static readonly string Symbol = "NVP";//Eso también.
         private static readonly byte[] Admin = Helper.ToScriptHash("AFmseVrdL9f9oyCzZefL9tG6UbvhPbdYzM");
 
         private static readonly byte[] AddressZero = Helper.ToScriptHash("AFmseVrdL9f9oyCzZefL9tG6UbvhPbdYzM");
@@ -40,8 +36,6 @@ namespace AssetPool
         private static readonly byte[] ApprovePrefix = "approve".AsByteArray();
 
         public delegate object DynamicCallContract(string method, object[] args);
-
-
 
         static Object Main(string operation, params object[] args)
         {
@@ -146,8 +140,6 @@ namespace AssetPool
             return false;
         }
 
-
-
         [DisplayName("init")]
         public static object init(byte[] reversedNEP5Hash, BigInteger decimals, byte[] reversedCelerWalletHash)
         {
@@ -180,12 +172,15 @@ namespace AssetPool
         [DisplayName("balanceOf")]
         public static BigInteger balanceOf(byte[] owner)
         {
+            assert(_isLegalAddress(owner), "owner address is illegal");
             return Storage.Get(Storage.CurrentContext, BalancePrefix.Concat(owner)).AsBigInteger();
         }
 
         [DisplayName("allowance")]
         public static BigInteger allowance(byte[] owner, byte[] spender)
         {
+            assert(_isLegalAddress(owner), "owner address is illegal");
+            assert(_isLegalAddress(spender), "spender address is illegal");
             return Storage.Get(Storage.CurrentContext, ApprovePrefix.Concat(owner).Concat(spender)).AsBigInteger();
         }
 
@@ -334,8 +329,6 @@ namespace AssetPool
         //Transfer NEP5 for a specified addresses
         private static bool _transfer(byte[] from, byte[] to, BigInteger value)
         {
-
-
             Storage.Put(Storage.CurrentContext, BalancePrefix.Concat(from), balanceOf(from) - value);
 
             byte[] nep5Hash = Storage.Get(Storage.CurrentContext, NEP5HashKey);
@@ -346,7 +339,6 @@ namespace AssetPool
             return true;
         }
 
-
         private static void assert(bool condition, string msg)
         {
             if (!condition)
@@ -356,7 +348,7 @@ namespace AssetPool
         }
         private static bool _isLegalAddress(byte[] addr)
         {
-            return addr.Length == 0 && addr != AddressZero;
+            return addr.Length == 20 && addr != AddressZero;
         }
         private static bool _isByte32(byte[] byte32)
         {

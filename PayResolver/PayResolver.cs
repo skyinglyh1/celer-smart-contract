@@ -12,48 +12,56 @@ namespace PayResolver
 {
     public class PayResolver : SmartContract
     {
-        public class OpenChannelRequest
+        public struct OpenChannelRequest
         {
             public byte[] channelInitializer;
             public byte[][] sigs;
         }
-        public class CooperativeWithdrawRequest
+
+        public struct CooperativeWithdrawRequest
         {
             public byte[] withdrawInfo;
             public byte[][] sigs;
         }
-        public class CooperativeSettleRequest
+
+        public struct CooperativeSettleRequest
         {
             public byte[] settleInfo;
             public byte[][] sigs;
         }
+
         public class ResolvePayByConditionsRequest
         {
             public byte[] condPay;
             public byte[][] hashPreimages;
         }
-        public class SignedSimplexState
+
+        public struct SignedSimplexState
         {
             public byte[] simplexState;
             public byte[][] sigs;
         }
-        public class SignedSimplexStateArray
+
+        public struct SignedSimplexStateArray
         {
             public SignedSimplexState[] signedSimplexStates;
         }
-        public class ChannelMigrationRequest
+
+        public struct ChannelMigrationRequest
         {
             public byte[] channelMigrationInfo;
             public byte[][] sigs;
         }
 
-
-        public class TokenType
+        public struct TokenType
         {
-            public byte INVALID;
-            public byte NEP5;
+            public UInt16 INVALID;
+            public UInt16 NEO;
+            public UInt16 NEP5;
+            public UInt16 GAS;
         }
-        public class TransferFunctionType
+
+        public struct TransferFunctionType
         {
             public byte BOOLEAN_AND;
             public byte BOOLEAN_OR;
@@ -62,39 +70,45 @@ namespace PayResolver
             public byte NUMERIC_MAX;
             public byte NUMERIC_MIN;
         }
-        public class ConditionType
+
+        public struct ConditionType
         {
             public byte HASH_LOCK;
             public byte DEPLOYED_CONTRACT;
             public byte VIRTUAL_CONTRACT;
         }
 
-        public class AccountAmtPair
+        public struct AccountAmtPair
         {
             public byte[] account;
             public BigInteger amt;
         }
-        public class TokenInfo
+
+        public struct TokenInfo
         {
             public byte tokenType;
             public byte[] tokenAddress;
         }
-        public class TokenDistribution
+
+        public struct TokenDistribution
         {
             public TokenInfo token;
             public AccountAmtPair[] distribution;
         }
-        public class TokenTransfer
+
+        public struct TokenTransfer
         {
             public byte token;
             public AccountAmtPair receiver;
         }
-        public class PayIdList
+
+        public struct PayIdList
         {
             public byte[][] payIds;
             public byte[] nextListHash;
         }
-        public class SimplexPaymentChannel
+
+        public struct SimplexPaymentChannel
         {
             public byte[] channelId;
             public byte[] peerFrom;
@@ -104,11 +118,13 @@ namespace PayResolver
             public BigInteger lastPayResolveDeadline;
             public BigInteger totalPendingAmount;
         }
-        public class TransferFunction
+
+        public struct TransferFunction
         {
             public byte logicType;
             public TokenTransfer maxTransfer;
         }
+
         public class ConditionalPay
         {
             public BigInteger payTimestamp;
@@ -120,18 +136,21 @@ namespace PayResolver
             public BigInteger resolveTimeout;
             public byte[] payResolver;
         }
+
         public class VouchedCondPayResult
         {
             public byte[] condPayResult;
             public byte[] sigOfSrc;
             public byte[] sigOfDest;
         }
+
         public class CondPayResult
         {
             public byte[] condPay;
             public BigInteger amount;
         }
-        public class Condition
+
+        public struct Condition
         {
             public byte conditionType;
             public byte[] hashLock;
@@ -140,7 +159,8 @@ namespace PayResolver
             public byte[] argsQueryFinalization;
             public byte[] argsQueryOutcome;
         }
-        public class CooperativeWithdrawInfo
+
+        public struct CooperativeWithdrawInfo
         {
             public byte[] channelId;
             public BigInteger seqNum;
@@ -148,21 +168,24 @@ namespace PayResolver
             public BigInteger withdrawDeadline;
             public byte[] recipientChannelId;
         }
-        public class PaymentChannelInitializer
+
+        public struct PaymentChannelInitializer
         {
             public TokenDistribution initDistribution;
             public BigInteger openDeadline;
             public BigInteger disputeTimeout;
             public BigInteger msgValueReceiver;
         }
-        public class CooperativeSettleInfo
+
+        public struct CooperativeSettleInfo
         {
             public byte[] channelId;
             public BigInteger seqNum;
             public AccountAmtPair[] settleBalance;
             public BigInteger settleDeadline;
         }
-        public class ChannelMigrationInfo
+
+        public struct ChannelMigrationInfo
         {
             public byte[] channelId;
             public byte[] fromLedgerAddress;
@@ -170,17 +193,13 @@ namespace PayResolver
             public BigInteger migrationDeadline;
         }
 
-
-
         public static readonly byte[] PayRegistryHashKey = "payRegistry".AsByteArray();
         public static readonly byte[] VirtResolverHashKey = "virtResolver".AsByteArray();
         public static readonly byte[] AddressZero = Helper.ToScriptHash("AFmseVrdL9f9oyCzZefL9tG6UbvhPbdYzM");
         public delegate object DynamicCallContract(string method, object[] args);
 
-
         [DisplayName("resolvePayment")]
         public static event Action<byte[], BigInteger, BigInteger> ResolvePayment;
-
 
         public static Object Main(string operation, params object[] args)
         {
@@ -201,10 +220,6 @@ namespace PayResolver
                 {
                     return getVirtResolverHash();
                 }
-                if (operation == "getPayRegistryHash")
-                {
-                    return getVirtResolverHash();
-                }
                 if (operation == "resolvePaymentByConditions")
                 {
                     assert(args.Length == 1, "PayResolver parameter error");
@@ -217,12 +232,9 @@ namespace PayResolver
                     byte[] vouchedPayResultBs = (byte[])args[0];
                     return resolvePaymentByVouchedResult(vouchedPayResultBs);
                 }
-                return false;
             }
+            return false;
         }
-
-
-
 
         [DisplayName("init")]
         public static object init(byte[] revPayRegistryAddr, byte[] revVirtResolverAddr)
@@ -298,12 +310,11 @@ namespace PayResolver
             return true;
         }
 
-
         public static void _resolvePayment(ConditionalPay _pay, byte[] _payHash, BigInteger _amount)
         {
             assert(_amount >= 0, "amount is less than zero");
 
-            BigInteger now = Blockchain.GetHeader(Blockchain.GetHeight()).Timestamp;
+            BigInteger now = Blockchain.GetHeight();
             assert(now <= _pay.resolveDeadline, "passed pay resolve deadline in condPay msg");
 
             byte[] payId = _calculatePayId(_payHash, ExecutionEngine.ExecutingScriptHash);
@@ -349,9 +360,7 @@ namespace PayResolver
                 assert((bool)dyncall("setPayInfo", new object[] { _payHash, _amount, newDeadline }), "setPayInfo error");
                 ResolvePayment(payId, _amount, currentDeadline);
             }
-
         }
-
 
         private static BigInteger _calculateBooleanAndPayment(ConditionalPay _pay, byte[][] _preimages)
         {
@@ -375,7 +384,7 @@ namespace PayResolver
                     DynamicCallContract dyncall = (DynamicCallContract)booleanCondHash.ToDelegate();
                     assert((bool)dyncall("isFinalized", new object[] { cond.argsQueryFinalization }), "Condition is not finalized");
                     bool outcome = (bool)dyncall("getOutcome", new object[] { cond.argsQueryOutcome });
-                    if (outcome){
+                    if (!outcome){
                         hasFalseContractCond = true;
                     }
                 }
@@ -398,7 +407,7 @@ namespace PayResolver
         private static BigInteger _calculateBooleanOrPayment(ConditionalPay _pay, byte[][] _preimages)
         {
             int j = 0;
-            bool hasContracCond = false;
+            bool hasContractCond = false;
             bool hasTrueContractCond = false;
             ConditionType ConditionType = getConditionType();
             for (var i = 0; i < _pay.conditions.Length; i++)
@@ -417,7 +426,7 @@ namespace PayResolver
                     byte[] booleanCondHash = _getCondAddress(cond);
                     DynamicCallContract dyncall = (DynamicCallContract)booleanCondHash.ToDelegate();
                     assert((bool)dyncall("isFinalized", new object[] { cond.argsQueryFinalization }), "Condition is not finalized");
-                    hasContracCond = true;
+                    hasContractCond = true;
 
                     bool outcome = (bool)dyncall("getOutcome", new object[] { cond.argsQueryOutcome });
                     if (outcome)
@@ -430,7 +439,7 @@ namespace PayResolver
                     assert(false, "condition type error");
                 }
             }
-            if (!hasContracCond || hasTrueContractCond)
+            if (!hasContractCond || hasTrueContractCond)
             {
                 return _pay.transferFunc.maxTransfer.receiver.amt;
             }
@@ -518,14 +527,6 @@ namespace PayResolver
             return SmartContract.Sha256(_payHash.Concat(_setter));
         }
 
-
-
-
-
-
-
-
-
         private static byte[] _getCondAddress(Condition _cond)
         {
             ConditionType ConditionType = getConditionType();
@@ -543,14 +544,12 @@ namespace PayResolver
             return new byte[] { 0x00 };
         }
 
-
-
         private static byte[] TokenTypes(BigInteger[] arr)
         {
             byte[] arrb = new byte[arr.Length];
             for (var i = 0; i < arr.Length; i++)
             {
-                assert(arr[i] < 3, "token type error");
+                assert(arr[i] < 4, "token type error");
                 arrb[i] = arr[i].AsByte();
             }
             return arrb;
@@ -560,9 +559,12 @@ namespace PayResolver
         {
             TokenType tt = new TokenType();
             tt.INVALID = 0.ToByte();
-            tt.NEP5 = 1.ToByte();
+            tt.NEO = 1.ToByte();
+            tt.NEP5 = 2.ToByte();
+            tt.GAS = 3.ToByte();
             return tt;
         }
+
         private static TransferFunctionType getTransferFunctionType()
         {
             TransferFunctionType tft = new TransferFunctionType();
@@ -574,6 +576,7 @@ namespace PayResolver
             tft.NUMERIC_MIN = 5.ToByte();
             return tft;
         }
+
         private static ConditionType getConditionType()
         {
             ConditionType ct = new ConditionType();
@@ -582,7 +585,6 @@ namespace PayResolver
             ct.VIRTUAL_CONTRACT = 2.ToByte();
             return ct;
         }
-
 
         private static BigInteger max(BigInteger a, BigInteger b)
         {
@@ -607,7 +609,7 @@ namespace PayResolver
         }
         private static bool _isLegalAddress(byte[] addr)
         {
-            return addr.Length == 0 && addr != AddressZero;
+            return addr.Length == 20 && addr != AddressZero;
         }
     }
 }

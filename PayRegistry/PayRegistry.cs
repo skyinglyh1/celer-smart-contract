@@ -21,7 +21,6 @@ namespace PayRegistry
         [DisplayName("setPayAmount")]
         public static event Action<byte[], BigInteger, BigInteger> PayInfoUpdate;
 
-
         public static Object Main(string operation, params object[] args)
         {
             if (Runtime.Trigger == TriggerType.Verification)
@@ -104,9 +103,6 @@ namespace PayRegistry
             return false;
         }
 
-
-
-
         [DisplayName("calculatePayId")]
         public static byte[] calculatePayId(byte[] payHash, byte[] setter)
         {
@@ -186,7 +182,6 @@ namespace PayRegistry
             return true;
         }
 
-
         [DisplayName("setPayAmounts")]
         public static object setPayAmounts(byte[][] invokers, byte[][] payHashs, BigInteger[] amounts)
         {
@@ -239,7 +234,7 @@ namespace PayRegistry
             assert(lastPayResolveDeadline >= 0, "lastPayResolveDeadline less than zero");
 
             BigInteger[] amounts = new BigInteger[payIds.Length];
-            BigInteger now = Blockchain.GetHeader(Blockchain.GetHeight()).Timestamp;
+            BigInteger now = Blockchain.GetHeight();
             for (var i = 0; i < payIds.Length; i++)
             {
                 byte[] payInfoBs = Storage.Get(Storage.CurrentContext, PayInfoPrefix.Concat(payIds[i]));
@@ -284,7 +279,7 @@ namespace PayRegistry
         }
         private static bool _isLegalAddress(byte[] addr)
         {
-            return addr.Length == 0 && addr != AddressZero;
+            return addr.Length == 20 && addr != AddressZero;
         }
         private static bool _isLegalAddresses(byte[][] addrs)
         {

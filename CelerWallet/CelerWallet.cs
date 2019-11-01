@@ -10,7 +10,6 @@ namespace CelerWallet
 {
     public class CelerWallet : SmartContract
     {
-
         //private static bool _paused;
         public static byte[] PausedKey = "paused".AsByteArray();
 
@@ -27,12 +26,12 @@ namespace CelerWallet
             public byte[] proposedNewOperator;
             //public Map<byte[], bool> proposalVotes;
         }
-        public BigInteger walletNum;
+
+        public static byte[] WalletNum = "walletNum".AsByteArray();
         //public static Map<byte[], Wallet> wallets;
         public static byte[] WalletsPrefix = "wallets".AsByteArray();
         public static byte[] WalletsBalancesPrefix = "balances".AsByteArray();
         public static byte[] WalletsProposalVotesPrefix = "proposalVotes".AsByteArray();
-
 
         public delegate object NEP5Contract(string method, object[] args);
 
@@ -71,12 +70,6 @@ namespace CelerWallet
             }
             else if (Runtime.Trigger == TriggerType.Application)
             {
-                if (method == "unpause")
-                {
-                    assert(args.Length == 1, "params length error");
-                    byte[] invoker = (byte[])args[0];
-                    return unpause(invoker);
-                }
                 if (method == "unpause")
                 {
                     assert(args.Length == 1, "params length error");
@@ -229,15 +222,17 @@ namespace CelerWallet
 
             _whenNotPaused();
 
-            assert(theOperator == AddressZero, "New operator is address zero");
+            assert(theOperator != AddressZero, "New operator is address zero");
             byte[] SelfContractHash = ExecutionEngine.ExecutingScriptHash;
             byte[] concatRes = SelfContractHash.Concat(invoker).Concat(nonce);
             byte[] walletId = SmartContract.Sha256(concatRes);
-            assert(getWallet(walletId).theOperator.Length == 0, "Occupied wallet id");
+            assert(getWallet(walletId).theOperator == null, "Occupied wallet id");
             Wallet w = new Wallet();
             assert(_isLegalAddresses(owners), "owners contains illegal address");
             w.owners = owners;
             w.theOperator = theOperator;
+            BigInteger walletNum = Storage.Get(Storage.CurrentContext, WalletNum).AsBigInteger();
+            Storage.Put(Storage.CurrentContext, WalletNum, (walletNum + 1).AsByteArray());
             Storage.Put(Storage.CurrentContext, WalletsPrefix.Concat(walletId), Helper.Serialize(w));
             CreateWallet(walletId, owners, theOperator);
             return walletId;
@@ -317,7 +312,6 @@ namespace CelerWallet
             return true;
         }
 
-
         [DisplayName("proposeNewOperator")]
         public static object proposeNewOperator(byte[] invoker, byte[] walletId, byte[] newOperator)
         {
@@ -356,7 +350,6 @@ namespace CelerWallet
             return true;
         }
 
-
         [DisplayName("drainToken")]
         public static object drainToken(byte[] invoker, byte[] tokenAddress, byte[] receiver, BigInteger amount)
         {
@@ -374,7 +367,6 @@ namespace CelerWallet
             return true;
         }
 
-
         [DisplayName("getWalletOwners")]
         public static byte[][] getWalletOwners(byte[] walletId)
         {
@@ -385,6 +377,7 @@ namespace CelerWallet
                 w = Helper.Deserialize(walletBs) as Wallet;
             return w.owners;
         }
+
         [DisplayName("getOperator")]
         public static byte[] getOperator(byte[] walletId)
         {
@@ -395,6 +388,7 @@ namespace CelerWallet
                 w = Helper.Deserialize(walletBs) as Wallet;
             return w.theOperator;
         }
+
         [DisplayName("getBalance")]
         public static BigInteger getBalance(byte[] walletId, byte[] tokenAddress)
         {
@@ -409,7 +403,7 @@ namespace CelerWallet
             return 0;
         }
 
-        [DisplayName("getProposalVote")]
+        [DisplayName("getProposedNewOperator")]
         public static byte[] getProposedNewOperator(byte[] walletId)
         {
             assert(_isByte32(walletId), "walletId illegal");
@@ -439,8 +433,6 @@ namespace CelerWallet
             return false;
         }
 
-
-
         private static bool _checkAllVotes(Wallet _w, Map<byte[], bool> _wpv)
         {
             for (var i = 0; i < _w.owners.Length; i++)
@@ -450,9 +442,6 @@ namespace CelerWallet
             }
             return true;
         }
-
-
-
 
         private static Map<byte[], bool> _clearVotes(Wallet _w, Map<byte[], bool> _wpv)
         {
@@ -469,13 +458,12 @@ namespace CelerWallet
             assert(_isLegalAddress(_newOperator), "new operator is illegal");
             Wallet w = getWallet(_walletId);
             byte[] oldOperator = w.theOperator;
-            assert(_isLegalAddress(oldOperator), "walletId does not exist");
+            assert(_isLegalAddress(oldOperator), "old operator is not legal");
 
             w.theOperator = _newOperator;
 
             Storage.Put(Storage.CurrentContext, WalletsPrefix.Concat(_walletId), Helper.Serialize(w));
             ChangeOperator(_walletId, oldOperator, _newOperator);
-
         }
 
         private static bool _withdrawToken(byte[] _tokenAddress, byte[] _receiver, BigInteger _amount)
@@ -485,6 +473,7 @@ namespace CelerWallet
             bool res = (bool)dyncall("transfer", args);
             return res;
         }
+
         private static bool _updateBalance(byte[] _walletId, byte[] _tokenAddress, BigInteger _amount, string _mathOperation)
         {
 
@@ -534,15 +523,13 @@ namespace CelerWallet
 
         private static bool _isLegalAddress(byte[] addr)
         {
-            return addr.Length == 0 && addr != AddressZero;
+            return addr.Length == 20 && addr != AddressZero;
         }
 
         private static bool _isByte32(byte[] byte32)
         {
             return byte32.Length == 32;
         }
-
-
 
         public static bool _isWalletOwner(byte[] _walletId, byte[] _addr)
         {
@@ -557,27 +544,11 @@ namespace CelerWallet
             return false;
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         private static void _onlyPauser(byte[] invoker)
         {
             assert(isPauser(invoker), "the invoker is not one effective pauser");
         }
+
         public static bool isPauser(byte[] account)
         {
             byte[] pauserBs = Storage.Get(Storage.CurrentContext, PauserKey);
@@ -592,6 +563,7 @@ namespace CelerWallet
             }
             return false;
         }
+
         [DisplayName("addPauser")]
         public static object addPauser(byte[] invoker, byte[] account)
         {
@@ -610,6 +582,7 @@ namespace CelerWallet
             PauserAdded(account);
             return true;
         }
+
         [DisplayName("removePauser")]
         public static object removePauser(byte[] invoker, byte[] account)
         {
@@ -628,31 +601,33 @@ namespace CelerWallet
             PauserRemoveded(account);
             return true;
         }
-
-
-
+        
         public static bool getPausedStatus()
         {
             return Storage.Get(Storage.CurrentContext, PausedKey) == new byte[] { 0x01 };
         }
+
         public static void _whenNotPaused()
         {
             assert(!getPausedStatus(), "Pausable: paused");
         }
+
         public static void _whenPaused()
         {
             assert(getPausedStatus(), "Pausable: paused");
         }
+
         [DisplayName("pause")]
         public static object pause(byte[] invoker)
         {
             assert(Runtime.CheckWitness(invoker), "CheckWitness failed");
             _onlyPauser(invoker);
             _whenNotPaused();
-            Storage.Put(Storage.CurrentContext, PauserKey, new byte[] { 0x01 });
+            Storage.Put(Storage.CurrentContext, PausedKey, new byte[] { 0x01 });
             Paused(invoker);
             return true;
         }
+
         [DisplayName("unpause")]
         public static object unpause(byte[] invoker)
         {
@@ -660,10 +635,11 @@ namespace CelerWallet
 
             _onlyPauser(invoker);
             _whenPaused();
-            Storage.Put(Storage.CurrentContext, PauserKey, new byte[] { 0x00 });
+            Storage.Put(Storage.CurrentContext, PausedKey, new byte[] { 0x00 });
             UnPaused(invoker);
             return true;
         }
+
         public static void assert(bool condition, string msg)
         {
             if (!condition)

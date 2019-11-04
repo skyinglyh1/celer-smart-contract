@@ -3,7 +3,7 @@ using Neo.SmartContract.Framework.Services.Neo;
 using System;
 using System.Numerics;
 
-namespace LedgerStruct
+namespace CelerLedger
 {
     public class CelerLedger : SmartContract
     {

@@ -5,7 +5,7 @@ using System.Numerics;
 
 namespace LedgerStruct
 {
-    public class LedgerStruct : SmartContract
+    public class CelerLedger : SmartContract
     {
         public struct ChannelStatus
         {

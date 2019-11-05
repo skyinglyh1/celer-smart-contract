@@ -1,10 +1,8 @@
 ﻿using Neo.SmartContract.Framework;
 using Neo.SmartContract.Framework.Services.Neo;
 using System;
-using System.Numerics;
-using Helper = Neo.SmartContract.Framework.Helper;
 using System.ComponentModel;
-using Neo.SmartContract.Framework.Services.System;
+using System.Numerics;
 
 namespace VirtContractResolver
 {
@@ -13,7 +11,6 @@ namespace VirtContractResolver
         // byte23 -> address
         //public Map<byte[], byte[]> virtToRealMap;
         public static readonly byte[] Virt2RealPrefix = "virtToRealMap".AsByteArray();
-        private static readonly byte[] AddressZero = Helper.ToScriptHash("AFmseVrdL9f9oyCzZefL9tG6UbvhPbdYzM");
 
         [DisplayName("deploy")]
         public static event Action<byte[]> Deploy;
@@ -28,14 +25,14 @@ namespace VirtContractResolver
             {
                 if (operation == "deploy")
                 {
-                    assert(args.Length == 2, "VirtContractResolver parameter error");
+                    BasicMethods.assert(args.Length == 2, "VirtContractResolver parameter error");
                     byte[] avmCode = (byte[])args[0];
                     BigInteger nonce = (BigInteger)args[1];
                     return deploy(avmCode, nonce);
                 }
                 if (operation == "resolve")
                 {
-                    assert(args.Length == 1, "VirtContractResolver parameter error");
+                    BasicMethods.assert(args.Length == 1, "VirtContractResolver parameter error");
                     byte[] virtHashId = (byte[])args[0];
                     return resolve(virtHashId);
                 }
@@ -48,7 +45,7 @@ namespace VirtContractResolver
         {
             byte[] virtHashId = SmartContract.Sha256(avmCode.Concat(nonce.AsByteArray()));
             byte[] storedVirtAddr = Storage.Get(Storage.CurrentContext, Virt2RealPrefix.Concat(virtHashId));
-            assert(storedVirtAddr.Length == 0, "currently stored real address is not empty");
+            BasicMethods.assert(storedVirtAddr.Length == 0, "currently stored real address is not empty");
             // now deploy the contract 
             byte[] parameter_list = new byte[] { 0x07, 0x10 };
             byte return_type = 0x05;
@@ -62,7 +59,7 @@ namespace VirtContractResolver
             //byte[] seemsToBeNewlyDeployedContractAddr = SmartContract.Hash160(avmCode);
             byte[] seemsToBeNewlyDeployedContractAddr = newDeployedContract.Script;
 
-            assert(seemsToBeNewlyDeployedContractAddr != AddressZero, "Create contract failed");
+            BasicMethods.assert(BasicMethods._isLegalAddress(seemsToBeNewlyDeployedContractAddr), "Create contract failed");
             Storage.Put(Storage.CurrentContext, Virt2RealPrefix.Concat(virtHashId), seemsToBeNewlyDeployedContractAddr);
 
             Deploy(virtHashId);
@@ -74,20 +71,8 @@ namespace VirtContractResolver
         public static byte[] resolve(byte[] virtHashId)
         {
             byte[] storedVirtAddr = Storage.Get(Storage.CurrentContext, Virt2RealPrefix.Concat(virtHashId));
-            assert(_isLegalAddress(storedVirtAddr), "nonexistent virtual address");
+            BasicMethods.assert(BasicMethods._isLegalAddress(storedVirtAddr), "nonexistent virtual address");
             return storedVirtAddr;
-        }
-
-        private static void assert(bool condition, string msg)
-        {
-            if (!condition)
-            {
-                throw new Exception((msg.HexToBytes().Concat(" error ".HexToBytes())).AsString());
-            }
-        }
-        private static bool _isLegalAddress(byte[] addr)
-        {
-            return addr.Length == 20 && addr != AddressZero;
         }
     }
 }

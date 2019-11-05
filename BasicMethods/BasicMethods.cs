@@ -1,9 +1,10 @@
-using Neo.SmartContract.Framework;
 using System;
 
 public class BasicMethods
 {
-    private static readonly byte[] AddressZero = Neo.SmartContract.Framework.Helper.ToScriptHash("AFmseVrdL9f9oyCzZefL9tG6UbvhPbdYzM");
+    private static readonly byte[] addressZero = Neo.SmartContract.Framework.Helper.ToScriptHash("AFmseVrdL9f9oyCzZefL9tG6UbvhPbdYzM");
+
+    private static readonly int legalLength = 20;
 
     public static void assert(bool condition, string msg)
     {
@@ -15,7 +16,12 @@ public class BasicMethods
 
     public static bool _isLegalAddress(byte[] addr)
     {
-        return addr.Length == 20 && addr != AddressZero;
+        return addr.Length == legalLength && addr != addressZero;
+    }
+
+    public static bool _isLegalLength(int len)
+    {
+        return len == legalLength;
     }
 
     public static bool _isByte32(byte[] byte32)

@@ -9,20 +9,6 @@ namespace PbEntity
 {
     public class PbEntity : SmartContract
     {
-        private const int addressLength = 20;
-
-        public static bool assert(bool condition, string msg)
-        {
-            if (condition)
-            {
-                return true;
-            }
-            else
-            {
-                throw new Exception((msg.HexToBytes().Concat(" not support".HexToBytes())).AsString());
-            }
-        }
-
         public struct TokenType
         {
             public UInt16 INVALID;
@@ -158,7 +144,7 @@ namespace PbEntity
             int len = 0;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
-            assert(len == addressLength, "account length error");
+            BasicMethods.assert(BasicMethods._isLegalLength(len), "account length error");
             seek += 2;
             aap.account = raw.Range(seek, len);
             seek += len;
@@ -166,9 +152,9 @@ namespace PbEntity
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
             aap.amt = raw.Range(seek, len).AsBigInteger();
-            assert(aap.amt >= 0, "amt error");
+            BasicMethods.assert(aap.amt >= 0, "amt error");
             seek += len;
-            assert(raw.Length == seek, "decAccountAmtPair raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decAccountAmtPair raw data illegal");
             return aap;
         }
 
@@ -186,15 +172,15 @@ namespace PbEntity
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
             ti.tokenType = (UInt16)(raw.Range(seek, len).AsBigInteger());
-            assert(ti.tokenType <= getTokenType().GAS, "tokenType illegal");
+            BasicMethods.assert(ti.tokenType <= getTokenType().GAS, "tokenType illegal");
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == addressLength, "address illegal");
+            BasicMethods.assert(BasicMethods._isLegalLength(len), "address illegal");
             ti.address = raw.Range(seek, len);
             seek += len;
-            assert(raw.Length == seek, "decTokenInfo raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decTokenInfo raw data illegal");
             return ti;
         }
 
@@ -212,11 +198,11 @@ namespace PbEntity
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
             td.token = (UInt16)(raw.Range(seek, len).AsBigInteger());
-            assert(td.token <= getTokenType().GAS, "tokenType illegal");
+            BasicMethods.assert(td.token <= getTokenType().GAS, "tokenType illegal");
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
-            assert(len >= 0, "distribution illegal");
+            BasicMethods.assert(len >= 0, "distribution illegal");
             seek += 2;
             td.distribution = new AccountAmtPair[len];
 
@@ -227,7 +213,7 @@ namespace PbEntity
                 td.distribution[i] = decAccountAmtPair(raw.Range(seek, k));
                 seek += k;
             }
-            assert(raw.Length == seek, "decTokenDistribution raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decTokenDistribution raw data illegal");
             return td;
         }
 
@@ -245,14 +231,14 @@ namespace PbEntity
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
             tt.token = (UInt16)(raw.Range(seek, len).AsBigInteger());
-            assert(tt.token <= getTokenType().GAS, "tokenType illegal");
+            BasicMethods.assert(tt.token <= getTokenType().GAS, "tokenType illegal");
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
             tt.receiver = decAccountAmtPair(raw.Range(seek, len));
             seek += len;
-            assert(raw.Length == seek, "decTokenInfo raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decTokenInfo raw data illegal");
             return tt;
         }
 
@@ -268,24 +254,24 @@ namespace PbEntity
             int len = 0;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
-            assert(len >= 0, "payIds illegal");
+            BasicMethods.assert(len >= 0, "payIds illegal");
             seek += 2;
             pil.payIds = new byte[len][];
             for (int i = 0; i < len; i++)
             {
                 int k = (int)raw.Range(seek, 2).AsBigInteger();
                 seek += 2;
-                assert(k == 32, "payIds " + i + " illegal");
+                BasicMethods.assert(k == 32, "payIds " + i + " illegal");
                 pil.payIds[i] = raw.Range(seek, k);
                 seek += k;
             }
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == 32, "nextListHash illegal");
+            BasicMethods.assert(len == 32, "nextListHash illegal");
             pil.nextListHash = raw.Range(seek, len);
             seek += len;
-            assert(raw.Length == seek, "decPayIdList raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decPayIdList raw data illegal");
             return pil;
         }
 
@@ -307,18 +293,18 @@ namespace PbEntity
 
             len = (int)(raw.Range(seek, 2).AsBigInteger());
             seek += 2;
-            assert(len == 32, "channelId should be 32 bytes");
+            BasicMethods.assert(len == 32, "channelId should be 32 bytes");
             spc.channelId = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == addressLength, "peerFrom illegal");
+            BasicMethods.assert(BasicMethods._isLegalLength(len), "peerFrom illegal");
             spc.peerFrom = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
-            assert(len >= 0, "seqNum illegal");
+            BasicMethods.assert(len >= 0, "seqNum illegal");
             seek += 2;
             spc.seqNum = raw.Range(seek, len).AsBigInteger();
             seek += len;
@@ -334,18 +320,18 @@ namespace PbEntity
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
-            assert(len >= 0, "lastPayResolveDeadline illegal");
+            BasicMethods.assert(len >= 0, "lastPayResolveDeadline illegal");
             seek += 2;
             spc.lastPayResolveDeadline = raw.Range(seek, len).AsBigInteger();
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
-            assert(len >= 0, "totalPendingAmount illegal");
+            BasicMethods.assert(len >= 0, "totalPendingAmount illegal");
             seek += 2;
             spc.totalPendingAmount = raw.Range(seek, len).AsBigInteger();
             seek += len;
 
-            assert(raw.Length == seek, "decSimplexPaymentChannel raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decSimplexPaymentChannel raw data illegal");
             return spc;
         }
 
@@ -363,14 +349,14 @@ namespace PbEntity
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
             tf.logicType = (UInt16)(raw.Range(seek, len).AsBigInteger());
-            assert(tf.logicType <= getTransferFunctionType().NUMERIC_MIN, "logicType illegal");
+            BasicMethods.assert(tf.logicType <= getTransferFunctionType().NUMERIC_MIN, "logicType illegal");
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
             tf.maxTransfer = decTokenTransfer(raw.Range(seek, len));
             seek += len;
-            assert(raw.Length == seek, "decTransferFunction raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decTransferFunction raw data illegal");
             return tf;
         }
 
@@ -392,24 +378,24 @@ namespace PbEntity
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
             c.conditionType = (UInt16)(raw.Range(seek, len).AsBigInteger());
-            assert(c.conditionType <= getConditionTypes().VIRTUAL_CONTRACT, "conditionType illegal");
+            BasicMethods.assert(c.conditionType <= getConditionTypes().VIRTUAL_CONTRACT, "conditionType illegal");
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == 32, "hashLock illegal");
+            BasicMethods.assert(len == 32, "hashLock illegal");
             c.hashLock = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == addressLength, "deployedContractAddress illegal");
+            BasicMethods.assert(BasicMethods._isLegalLength(len), "deployedContractAddress illegal");
             c.deployedContractAddress = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == 32, "virtualContractAddress illegal");
+            BasicMethods.assert(len == 32, "virtualContractAddress illegal");
             c.virtualContractAddress = raw.Range(seek, len);
             seek += len;
 
@@ -423,7 +409,7 @@ namespace PbEntity
             c.argsQueryOutcome = raw.Range(seek, len);
             seek += len;
 
-            assert(raw.Length == seek, "decCondition raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decCondition raw data illegal");
             return c;
         }
 
@@ -447,23 +433,23 @@ namespace PbEntity
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
             cp.payTimestamp = raw.Range(seek, len).AsBigInteger();
-            assert(cp.payTimestamp > 0, "payTimestamp illegal");
+            BasicMethods.assert(cp.payTimestamp > 0, "payTimestamp illegal");
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == addressLength, "src illegal");
+            BasicMethods.assert(BasicMethods._isLegalLength(len), "src illegal");
             cp.src = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == addressLength, "dest illegal");
+            BasicMethods.assert(BasicMethods._isLegalLength(len), "dest illegal");
             cp.dest = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
-            assert(len >= 0, "conditions illegal");
+            BasicMethods.assert(len >= 0, "conditions illegal");
             seek += 2;
             cp.conditions = new Condition[len];
 
@@ -492,11 +478,11 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == addressLength, "payResolver illegal");
+            BasicMethods.assert(BasicMethods._isLegalLength(len), "payResolver illegal");
             cp.payResolver = raw.Range(seek, len);
             seek += len;
 
-            assert(raw.Length == seek, "decConditionalPay raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decConditionalPay raw data illegal");
             return cp;
         }
 
@@ -521,7 +507,7 @@ namespace PbEntity
             cpr.amount = raw.Range(seek, len).AsBigInteger();
             seek += len;
 
-            assert(raw.Length == seek, "decConditionalPay raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decConditionalPay raw data illegal");
             return cpr;
         }
 
@@ -552,7 +538,7 @@ namespace PbEntity
             vcpr.sigOfDes = raw.Range(seek, len);
             seek += len;
 
-            assert(raw.Length == seek, "decConditionalPay raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decConditionalPay raw data illegal");
             return vcpr;
         }
 
@@ -572,7 +558,7 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == 32, "channelId illegal");
+            BasicMethods.assert(len == 32, "channelId illegal");
             cwi.channelId = raw.Range(seek, len);
             seek += len;
 
@@ -593,11 +579,11 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == 32, "recipientChannelId illegal");
+            BasicMethods.assert(len == 32, "recipientChannelId illegal");
             cwi.recipientChannelId = raw.Range(seek, len);
             seek += len;
 
-            assert(raw.Length == seek, "decConditionalPay raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decConditionalPay raw data illegal");
             return cwi;
         }
 
@@ -634,7 +620,7 @@ namespace PbEntity
             pci.msgValueReceiver = raw.Range(seek, len).AsBigInteger();
             seek += len;
 
-            assert(raw.Length == seek, "decPaymentChannelInitializer raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decPaymentChannelInitializer raw data illegal");
             return pci;
         }
 
@@ -653,7 +639,7 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == 32, "channelId illegal");
+            BasicMethods.assert(len == 32, "channelId illegal");
             csi.channelId = raw.Range(seek, len);
             seek += len;
 
@@ -663,7 +649,7 @@ namespace PbEntity
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
-            assert(len >= 0, "settleBalance illegal");
+            BasicMethods.assert(len >= 0, "settleBalance illegal");
             seek += 2;
             csi.settleBalance = new AccountAmtPair[len];
 
@@ -680,7 +666,7 @@ namespace PbEntity
             csi.settleDeadline = raw.Range(seek, len).AsBigInteger();
             seek += len;
 
-            assert(raw.Length == seek, "decCooperativeSettleInfo raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decCooperativeSettleInfo raw data illegal");
             return csi;
         }
 
@@ -700,19 +686,19 @@ namespace PbEntity
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == 32, "channelId illegal");
+            BasicMethods.assert(len == 32, "channelId illegal");
             cmi.channelId = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == addressLength, "fromLedgerAddress illegal");
+            BasicMethods.assert(BasicMethods._isLegalLength(len), "fromLedgerAddress illegal");
             cmi.fromLedgerAddress = raw.Range(seek, len);
             seek += len;
 
             len = (int)raw.Range(seek, 2).AsBigInteger();
             seek += 2;
-            assert(len == addressLength, "toLegerAddress illegal");
+            BasicMethods.assert(BasicMethods._isLegalLength(len), "toLegerAddress illegal");
             cmi.toLegerAddress = raw.Range(seek, len);
             seek += len;
 
@@ -721,7 +707,7 @@ namespace PbEntity
             cmi.migrationDeadline = raw.Range(seek, len).AsBigInteger();
             seek += len;
 
-            assert(raw.Length == seek, "decPaymentChannelInitializer raw data illegal");
+            BasicMethods.assert(raw.Length == seek, "decPaymentChannelInitializer raw data illegal");
             return cmi;
         }
 

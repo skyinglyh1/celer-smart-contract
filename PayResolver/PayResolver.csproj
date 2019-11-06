@@ -45,6 +45,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\BasicMethods\BasicMethods.cs">
+      <Link>BasicMethods.cs</Link>
+    </Compile>
+    <Compile Include="..\PbChain\PbChain.cs">
+      <Link>PbChain.cs</Link>
+    </Compile>
+    <Compile Include="..\PbEntity\PbEntity.cs">
+      <Link>PbEntity.cs</Link>
+    </Compile>
     <Compile Include="PayResolver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

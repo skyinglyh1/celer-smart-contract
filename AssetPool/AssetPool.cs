@@ -23,8 +23,6 @@ namespace AssetPool
         private static readonly string Symbol = "NVP";//Eso también.
         private static readonly byte[] Admin = Helper.ToScriptHash("AFmseVrdL9f9oyCzZefL9tG6UbvhPbdYzM");
 
-        private static readonly byte[] AddressZero = Helper.ToScriptHash("AFmseVrdL9f9oyCzZefL9tG6UbvhPbdYzM");
-
         private static readonly byte[] TotalSupplyKey = "total".AsByteArray();
         private static readonly byte[] DecimalsKey = "decimals".AsByteArray();
         private static readonly byte[] NEP5HashKey = "nep5hash".AsByteArray();
@@ -47,7 +45,7 @@ namespace AssetPool
             {
                 if (operation == "init")
                 {
-                    assert(args.Length == 3, "AssetPool parameter error");
+                    BasicMethods.assert(args.Length == 3, "AssetPool parameter error");
                     byte[] reversedNEP5Hash = (byte[])args[0];
                     BigInteger decimals = (BigInteger)args[1];
                     byte[] reversedCelerWalletHash = (byte[])args[2];
@@ -67,20 +65,20 @@ namespace AssetPool
                 }
                 if (operation == "balanceOf")
                 {
-                    assert(args.Length == 1, "AssetPool parameter error");
+                    BasicMethods.assert(args.Length == 1, "AssetPool parameter error");
                     byte[] address = (byte[])args[0];
                     return balanceOf(address);
                 }
                 if (operation == "allowance")
                 {
-                    assert(args.Length == 2, "AssetPool parameter error");
+                    BasicMethods.assert(args.Length == 2, "AssetPool parameter error");
                     byte[] owner = (byte[])args[0];
                     byte[] spender = (byte[])args[1];
                     return allowance(owner, spender);
                 }
                 if (operation == "deposit")
                 {
-                    assert(args.Length == 3, "AssetPool parameter error");
+                    BasicMethods.assert(args.Length == 3, "AssetPool parameter error");
                     byte[] depositer = (byte[])args[0];
                     byte[] receiver = (byte[])args[1];
                     BigInteger amount = (BigInteger)args[2];
@@ -88,14 +86,14 @@ namespace AssetPool
                 }
                 if (operation == "withdraw")
                 {
-                    assert(args.Length == 2, "AssetPool parameter error");
+                    BasicMethods.assert(args.Length == 2, "AssetPool parameter error");
                     byte[] withdrawer = (byte[])args[0];
                     BigInteger value = (BigInteger)args[1];
                     return withdraw(withdrawer, value);
                 }
                 if (operation == "approve")
                 {
-                    assert(args.Length == 3, "AssetPool parameter error");
+                    BasicMethods.assert(args.Length == 3, "AssetPool parameter error");
                     byte[] owner = (byte[])args[0];
                     byte[] spender = (byte[])args[1];
                     BigInteger value = (BigInteger)args[2];
@@ -103,7 +101,7 @@ namespace AssetPool
                 }
                 if (operation == "transferFrom")
                 {
-                    assert(args.Length == 4, "AssetPool parameter error");
+                    BasicMethods.assert(args.Length == 4, "AssetPool parameter error");
                     byte[] spender = (byte[])args[0];
                     byte[] from = (byte[])args[1];
                     byte[] to = (byte[])args[2];
@@ -112,7 +110,7 @@ namespace AssetPool
                 }
                 if (operation == "transferToCelerWallet")
                 {
-                    assert(args.Length == 5, "AssetPool parameter error");
+                    BasicMethods.assert(args.Length == 5, "AssetPool parameter error");
                     byte[] invoker = (byte[])args[0];
                     byte[] from = (byte[])args[1];
                     byte[] walletAddr = (byte[])args[2];
@@ -122,7 +120,7 @@ namespace AssetPool
                 }
                 if (operation == "increaseAllowance")
                 {
-                    assert(args.Length == 3, "AssetPool parameter error");
+                    BasicMethods.assert(args.Length == 3, "AssetPool parameter error");
                     byte[] owner = (byte[])args[0];
                     byte[] spender = (byte[])args[1];
                     BigInteger addValue = (BigInteger)args[2];
@@ -130,7 +128,7 @@ namespace AssetPool
                 }
                 if (operation == "decreaseAllowance")
                 {
-                    assert(args.Length == 3, "AssetPool parameter error");
+                    BasicMethods.assert(args.Length == 3, "AssetPool parameter error");
                     byte[] owner = (byte[])args[0];
                     byte[] spender = (byte[])args[1];
                     BigInteger subtractedValue = (BigInteger)args[2];
@@ -143,11 +141,11 @@ namespace AssetPool
         [DisplayName("init")]
         public static object init(byte[] reversedNEP5Hash, BigInteger decimals, byte[] reversedCelerWalletHash)
         {
-            assert(_isLegalAddress(reversedNEP5Hash), "nep5 contract hash illegal");
-            assert(decimals >= 0, "decimals is less than 0");
-            assert(_isLegalAddress(reversedCelerWalletHash), "celer wallet contract hash illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(reversedNEP5Hash), "nep5 contract hash illegal");
+            BasicMethods.assert(decimals >= 0, "decimals is less than 0");
+            BasicMethods.assert(BasicMethods._isLegalAddress(reversedCelerWalletHash), "celer wallet contract hash illegal");
 
-            assert(Runtime.CheckWitness(Admin), "is not initialized by admin");
+            BasicMethods.assert(Runtime.CheckWitness(Admin), "is not initialized by admin");
 
             Storage.Put(Storage.CurrentContext, NEP5HashKey, reversedNEP5Hash);
             Storage.Put(Storage.CurrentContext, DecimalsKey, decimals);
@@ -172,30 +170,30 @@ namespace AssetPool
         [DisplayName("balanceOf")]
         public static BigInteger balanceOf(byte[] owner)
         {
-            assert(_isLegalAddress(owner), "owner address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(owner), "owner address is illegal");
             return Storage.Get(Storage.CurrentContext, BalancePrefix.Concat(owner)).AsBigInteger();
         }
 
         [DisplayName("allowance")]
         public static BigInteger allowance(byte[] owner, byte[] spender)
         {
-            assert(_isLegalAddress(owner), "owner address is illegal");
-            assert(_isLegalAddress(spender), "spender address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(owner), "owner address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(spender), "spender address is illegal");
             return Storage.Get(Storage.CurrentContext, ApprovePrefix.Concat(owner).Concat(spender)).AsBigInteger();
         }
 
         [DisplayName("deposit")]
         public static object deposit(byte[] depositer, byte[] receiver, BigInteger amount)
         {
-            assert(_isLegalAddress(depositer), "depositer address is illegal");
-            assert(_isLegalAddress(receiver), "receiver address is illegal");
-            assert(amount >= 0, "amount is less than 0");
+            BasicMethods.assert(BasicMethods._isLegalAddress(depositer), "depositer address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(receiver), "receiver address is illegal");
+            BasicMethods.assert(amount >= 0, "amount is less than 0");
 
-            assert(Runtime.CheckWitness(depositer), "Checkwitness failed");
+            BasicMethods.assert(Runtime.CheckWitness(depositer), "Checkwitness failed");
 
             byte[] nep5Hash = Storage.Get(Storage.CurrentContext, NEP5HashKey);
             DynamicCallContract dyncall = (DynamicCallContract)nep5Hash.ToDelegate();
-            assert((bool)dyncall("transfer", new object[] { depositer, ExecutionEngine.ExecutingScriptHash, amount }), "transfer NEP5 token to the contract failed");
+            BasicMethods.assert((bool)dyncall("transfer", new object[] { depositer, ExecutionEngine.ExecutingScriptHash, amount }), "transfer NEP5 token to the contract failed");
             Storage.Put(Storage.CurrentContext, BalancePrefix.Concat(receiver), balanceOf(receiver) + amount);
 
             DepositEvent(receiver, amount);
@@ -205,30 +203,30 @@ namespace AssetPool
         [DisplayName("withdraw")]
         public static object withdraw(byte[] withdrawer, BigInteger value)
         {
-            assert(_isLegalAddress(withdrawer), "withdrawer address is illegal");
-            assert(value >= 0, "amount is less than zero");
+            BasicMethods.assert(BasicMethods._isLegalAddress(withdrawer), "withdrawer address is illegal");
+            BasicMethods.assert(value >= 0, "amount is less than zero");
 
-            assert(Runtime.CheckWitness(withdrawer), "Checkwitness failed");
+            BasicMethods.assert(Runtime.CheckWitness(withdrawer), "Checkwitness failed");
 
             byte[] nep5Hash = Storage.Get(Storage.CurrentContext, NEP5HashKey);
             DynamicCallContract dyncall = (DynamicCallContract)nep5Hash.ToDelegate();
-            assert((BigInteger)dyncall("balanceOf", new object[] { ExecutionEngine.ExecutingScriptHash }) >= value, "the contract accout nep5 balance not enough");
-            assert(balanceOf(withdrawer) >= value, "withdrawer does not have enough balance");
+            BasicMethods.assert((BigInteger)dyncall("balanceOf", new object[] { ExecutionEngine.ExecutingScriptHash }) >= value, "the contract accout nep5 balance not enough");
+            BasicMethods.assert(balanceOf(withdrawer) >= value, "withdrawer does not have enough balance");
 
-            assert(_transfer(withdrawer, withdrawer, value), "withdraw nep5 token failed");
+            BasicMethods.assert(_transfer(withdrawer, withdrawer, value), "withdraw nep5 token failed");
             return true;
         }
 
         [DisplayName("approve")]
         public static object approve(byte[] owner, byte[] spender, BigInteger value)
         {
-            assert(_isLegalAddress(owner), "owner address is illegal");
-            assert(_isLegalAddress(spender), "spender address is illegal");
-            assert(value >= 0, "amount is less than zero");
+            BasicMethods.assert(BasicMethods._isLegalAddress(owner), "owner address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(spender), "spender address is illegal");
+            BasicMethods.assert(value >= 0, "amount is less than zero");
 
-            assert(Runtime.CheckWitness(owner), "Checkwitness failed");
+            BasicMethods.assert(Runtime.CheckWitness(owner), "Checkwitness failed");
 
-            assert(value <= balanceOf(owner), "value is greater than balance of owner");
+            BasicMethods.assert(value <= balanceOf(owner), "value is greater than balance of owner");
 
             Storage.Put(Storage.CurrentContext, ApprovePrefix.Concat(owner).Concat(spender), value);
 
@@ -240,18 +238,18 @@ namespace AssetPool
         [DisplayName("transferFrom")]
         public static object transferFrom(byte[] spender, byte[] from, byte[] to, BigInteger amount)
         {
-            assert(_isLegalAddress(spender), "spender address is illegal");
-            assert(_isLegalAddress(from), "from address is illegal");
-            assert(_isLegalAddress(to), "to address is illegal");
-            assert(amount >= 0, "amount is less than 0");
+            BasicMethods.assert(BasicMethods._isLegalAddress(spender), "spender address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(from), "from address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(to), "to address is illegal");
+            BasicMethods.assert(amount >= 0, "amount is less than 0");
 
-            assert(Runtime.CheckWitness(spender), "CheckWitness failed");
+            BasicMethods.assert(Runtime.CheckWitness(spender), "CheckWitness failed");
 
             BigInteger approvedBalance = allowance(from, spender);
             BigInteger fromBalance = balanceOf(from);
             BigInteger toBalance = balanceOf(to);
-            assert(amount <= approvedBalance, "amount is greater than allowance of spender allowed to spend");
-            assert(amount <= fromBalance, "amount is greater than the owner's balance");
+            BasicMethods.assert(amount <= approvedBalance, "amount is greater than allowance of spender allowed to spend");
+            BasicMethods.assert(amount <= fromBalance, "amount is greater than the owner's balance");
 
             Storage.Put(Storage.CurrentContext, BalancePrefix.Concat(from), fromBalance - amount);
             Storage.Put(Storage.CurrentContext, BalancePrefix.Concat(to), toBalance + amount);
@@ -265,21 +263,21 @@ namespace AssetPool
         [DisplayName("transferToCelerWallet")]
         public static object transferToCelerWallet(byte[] invoker, byte[] from, byte[] walletAddr, byte[] walletId, BigInteger value)
         {
-            assert(_isLegalAddress(invoker), "invoker or spender address is illegal");
-            assert(_isLegalAddress(from), "from address is illegal");
-            assert(_isLegalAddress(walletAddr), "to address is illegal");
-            assert(_isByte32(walletId), "walletId is not byte32");
-            assert(value >= 0, "amount is less than 0");
+            BasicMethods.assert(BasicMethods._isLegalAddress(invoker), "invoker or spender address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(from), "from address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(walletAddr), "to address is illegal");
+            BasicMethods.assert(BasicMethods._isByte32(walletId), "walletId is not byte32");
+            BasicMethods.assert(value >= 0, "amount is less than 0");
 
-            assert(Runtime.CheckWitness(invoker), "CheckWitness failed");
+            BasicMethods.assert(Runtime.CheckWitness(invoker), "CheckWitness failed");
 
             BigInteger approvedBalance = allowance(from, invoker);
-            assert(value <= approvedBalance, "value is greater than allowance of spender allowed to spend");
+            BasicMethods.assert(value <= approvedBalance, "value is greater than allowance of spender allowed to spend");
             Storage.Put(Storage.CurrentContext, ApprovePrefix.Concat(from).Concat(invoker), approvedBalance - value);
             Approved(from, invoker, allowance(from, invoker));
 
             BigInteger fromBalance = balanceOf(from);
-            assert(value <= fromBalance, "value is greater than the owner's balance");
+            BasicMethods.assert(value <= fromBalance, "value is greater than the owner's balance");
             Storage.Put(Storage.CurrentContext, BalancePrefix.Concat(from), fromBalance - value);
             Transferred(from, walletAddr, value);
 
@@ -287,7 +285,7 @@ namespace AssetPool
             byte[] celerWalletHash = Storage.Get(Storage.CurrentContext, CelerWalletHashKey);
             byte[] nep5Hash = Storage.Get(Storage.CurrentContext, NEP5HashKey);
             DynamicCallContract dyncall = (DynamicCallContract)celerWalletHash.ToDelegate();
-            assert((bool)dyncall("depositNEP5", new object[] { invoker, walletId, nep5Hash, value }), "transfer NEP5 token to the to the celer wallet failed");
+            BasicMethods.assert((bool)dyncall("depositNEP5", new object[] { invoker, walletId, nep5Hash, value }), "transfer NEP5 token to the to the celer wallet failed");
 
             return true;
         }
@@ -295,11 +293,11 @@ namespace AssetPool
         [DisplayName("increaseAllowance")]
         public static object increaseAllowance(byte[] owner, byte[] spender, BigInteger addValue)
         {
-            assert(_isLegalAddress(owner), "owner address is illegal");
-            assert(_isLegalAddress(spender), "spender address is illegal");
-            assert(addValue >= 0, "addValue is less than zero");
+            BasicMethods.assert(BasicMethods._isLegalAddress(owner), "owner address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(spender), "spender address is illegal");
+            BasicMethods.assert(addValue >= 0, "addValue is less than zero");
 
-            assert(Runtime.CheckWitness(owner), "Checkwitness failed");
+            BasicMethods.assert(Runtime.CheckWitness(owner), "Checkwitness failed");
 
             Storage.Put(Storage.CurrentContext, ApprovePrefix.Concat(owner).Concat(spender), allowance(owner, spender) + addValue);
 
@@ -311,14 +309,14 @@ namespace AssetPool
         [DisplayName("decreaseAllowance")]
         public static object decreaseAllowance(byte[] owner, byte[] spender, BigInteger subtractedValue)
         {
-            assert(_isLegalAddress(owner), "owner address is illegal");
-            assert(_isLegalAddress(spender), "spender address is illegal");
-            assert(subtractedValue >= 0, "addValue is less than zero");
+            BasicMethods.assert(BasicMethods._isLegalAddress(owner), "owner address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(spender), "spender address is illegal");
+            BasicMethods.assert(subtractedValue >= 0, "addValue is less than zero");
 
-            assert(Runtime.CheckWitness(owner), "Checkwitness failed");
+            BasicMethods.assert(Runtime.CheckWitness(owner), "Checkwitness failed");
 
             BigInteger approvedBalance = allowance(owner, spender);
-            assert(approvedBalance >= subtractedValue, "not enough allowance to be subtracted");
+            BasicMethods.assert(approvedBalance >= subtractedValue, "not enough allowance to be subtracted");
             Storage.Put(Storage.CurrentContext, ApprovePrefix.Concat(owner).Concat(spender), allowance(owner, spender) - subtractedValue);
 
             Approved(owner, spender, allowance(owner, spender));
@@ -333,26 +331,10 @@ namespace AssetPool
 
             byte[] nep5Hash = Storage.Get(Storage.CurrentContext, NEP5HashKey);
             DynamicCallContract dyncall = (DynamicCallContract)nep5Hash.ToDelegate();
-            assert((bool)dyncall("transfer", new object[] { ExecutionEngine.ExecutingScriptHash, to, value }), "transfer NEP5 token to the to as the withdrawer'd like to failed");
+            BasicMethods.assert((bool)dyncall("transfer", new object[] { ExecutionEngine.ExecutingScriptHash, to, value }), "transfer NEP5 token to the to as the withdrawer'd like to failed");
 
             Transferred(from, to, value);
             return true;
-        }
-
-        private static void assert(bool condition, string msg)
-        {
-            if (!condition)
-            {
-                throw new Exception((msg.HexToBytes().Concat(" error ".HexToBytes())).AsString());
-            }
-        }
-        private static bool _isLegalAddress(byte[] addr)
-        {
-            return addr.Length == 20 && addr != AddressZero;
-        }
-        private static bool _isByte32(byte[] byte32)
-        {
-            return byte32.Length == 32;
         }
     }
 }

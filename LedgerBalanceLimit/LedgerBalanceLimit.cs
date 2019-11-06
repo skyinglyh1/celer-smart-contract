@@ -12,8 +12,6 @@ namespace LedgerBalanceLimit
 
         private static readonly byte[] BalanceLimitsEnabledPrefix = "balanceLimitsEnabled".AsByteArray();
 
-        private static readonly byte[] AddressZero = Neo.SmartContract.Framework.Helper.ToScriptHash("AFmseVrdL9f9oyCzZefL9tG6UbvhPbdYzM");
-
         static Object Main(string operation, params object[] args)
         {
             if (Runtime.Trigger == TriggerType.Verification)
@@ -24,10 +22,10 @@ namespace LedgerBalanceLimit
             {
                 if (operation == "setBalanceLimits")
                 {
-                    assert(args.Length == 2, "setBalanceLimits parameter error");
+                    BasicMethods.assert(args.Length == 2, "setBalanceLimits parameter error");
                     byte[][] tokenAddrs = (byte[][])args[0];
                     BigInteger[] limits = (BigInteger[])args[1];
-                    assert(tokenAddrs.Length == limits.Length, "Lengths do not match");
+                    BasicMethods.assert(tokenAddrs.Length == limits.Length, "Lengths do not match");
                     return setBalanceLimits(tokenAddrs, limits);
                 }
                 else if (operation == "disableBalanceLimits")
@@ -40,9 +38,9 @@ namespace LedgerBalanceLimit
                 }
                 else if (operation == "getBalanceLimit")
                 {
-                    assert(args.Length == 1, "getBalanceLimit parameter error");
+                    BasicMethods.assert(args.Length == 1, "getBalanceLimit parameter error");
                     byte[] tokenAddrs = (byte[])args[0];
-                    assert(_isLegalAddress(tokenAddrs), "tokenAddrs is illegal");
+                    BasicMethods.assert(BasicMethods._isLegalAddress(tokenAddrs), "tokenAddrs is illegal");
                     return getBalanceLimit(tokenAddrs);
                 }
                 else if (operation == "getBalanceLimitsEnabled")
@@ -58,7 +56,7 @@ namespace LedgerBalanceLimit
         {
             for (int i = 0; i < tokenAddrs.Length; i++)
             {
-                assert(_isLegalAddress(tokenAddrs[i]), "Token address " + i + " is illegal");
+                BasicMethods.assert(BasicMethods._isLegalAddress(tokenAddrs[i]), "Token address " + i + " is illegal");
                 Storage.Put(Storage.CurrentContext, BalanceLimitsPrefix.Concat(tokenAddrs[i]), limits[i]);
             }
             return true;
@@ -81,7 +79,7 @@ namespace LedgerBalanceLimit
         [DisplayName("getBalanceLimit")]
         public static BigInteger getBalanceLimit(byte[] tokenAddr)
         {
-            assert(_isLegalAddress(tokenAddr), "Token address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(tokenAddr), "Token address is illegal");
             return Storage.Get(Storage.CurrentContext, BalanceLimitsPrefix.Concat(tokenAddr)).ToBigInteger();
         }
 
@@ -90,23 +88,7 @@ namespace LedgerBalanceLimit
         {
             byte[] result = Storage.Get(Storage.CurrentContext, BalanceLimitsEnabledPrefix);
             if (result == null) return false;
-            else return BitConverter.ToInt32(result, 0) == 1;
-        }
-
-        private static void assert(bool condition, string msg)
-        {
-            if (!condition)
-            {
-                throw new Exception((msg.HexToBytes().Concat(" error ".HexToBytes())).AsString());
-            }
-        }
-        private static bool _isLegalAddress(byte[] addr)
-        {
-            return addr.Length == 20 && addr != AddressZero;
-        }
-        private static bool _isByte32(byte[] byte32)
-        {
-            return byte32.Length == 32;
+            else return result.ToBigInteger() == 1;
         }
     }
 }

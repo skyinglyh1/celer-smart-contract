@@ -19,6 +19,18 @@ public class BasicMethods
         return addr.Length == legalLength && addr != addressZero;
     }
 
+    public static bool _isLegalAddresses(byte[][] addrs)
+    {
+        for (var i = 0; i < addrs.Length; i++)
+        {
+            if (_isLegalAddress(addrs[i]) == false)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static bool _isLegalLength(int len)
     {
         return len == legalLength;
@@ -27,5 +39,17 @@ public class BasicMethods
     public static bool _isByte32(byte[] byte32)
     {
         return byte32.Length == 32;
+    }
+
+    public static bool _isByte32s(byte[][] byte32s)
+    {
+        for (var i = 0; i < byte32s.Length; i++)
+        {
+            if (_isByte32(byte32s[i]) == false)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }

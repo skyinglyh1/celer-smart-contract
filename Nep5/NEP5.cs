@@ -18,8 +18,6 @@ namespace NEP5
         private static readonly BigInteger InitialSupply = 100000000;
         private static readonly byte[] Admin = Helper.ToScriptHash("AFmseVrdL9f9oyCzZefL9tG6UbvhPbdYzM");
 
-        private static readonly byte[] AddressZero = Helper.ToScriptHash("AFmseVrdL9f9oyCzZefL9tG6UbvhPbdYzM");
-
         private static readonly byte[] TotalSupplyKey = "total".AsByteArray();
 
         //public static Map<byte[], BigInteger> balances;
@@ -57,13 +55,13 @@ namespace NEP5
                 }
                 if (operation == "balanceOf")
                 {
-                    assert(args.Length == 1, "NEP5 parameter error");
+                    BasicMethods.assert(args.Length == 1, "NEP5 parameter error");
                     byte[] address = (byte[])args[0];
                     return balanceOf(address);
                 }
                 if (operation == "transfer")
                 {
-                    assert(args.Length == 3, "NEP5 parameter error");
+                    BasicMethods.assert(args.Length == 3, "NEP5 parameter error");
                     byte[] from = (byte[])args[0];
                     byte[] to = (byte[])args[1];
                     BigInteger amount = (BigInteger)args[2];
@@ -81,7 +79,7 @@ namespace NEP5
         [DisplayName("init")]
         public static object init()
         {
-            assert(totalSupply() == 0, "contract has already been initilaized");
+            BasicMethods.assert(totalSupply() == 0, "contract has already been initilaized");
             BigInteger supply = Factor * InitialSupply;
             Storage.Put(Storage.CurrentContext, TotalSupplyKey, supply);
             Storage.Put(Storage.CurrentContext, BalancePrefix.Concat(Admin), supply);
@@ -107,21 +105,21 @@ namespace NEP5
         [DisplayName("balanceOf")]
         public static BigInteger balanceOf(byte[] address)
         {
-            assert(_isLegalAddress(address), "address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(address), "address is illegal");
             return Storage.Get(Storage.CurrentContext, BalancePrefix.Concat(address)).AsBigInteger();
         }
 
         [DisplayName("transfer")]
         public static object transfer(byte[] from, byte[] to, BigInteger amount)
         {
-            assert(_isLegalAddress(from), "from address is illegal");
-            assert(_isLegalAddress(to), "to address is illegal");
-            assert(amount >= 0, "amount is less than 0");
+            BasicMethods.assert(BasicMethods._isLegalAddress(from), "from address is illegal");
+            BasicMethods.assert(BasicMethods._isLegalAddress(to), "to address is illegal");
+            BasicMethods.assert(amount >= 0, "amount is less than 0");
 
-            assert(Runtime.CheckWitness(from), "CheckWitness failed");
+            BasicMethods.assert(Runtime.CheckWitness(from), "CheckWitness failed");
 
             BigInteger fromBalance = balanceOf(from);
-            assert(fromBalance >= amount, "from address not enough balance");
+            BasicMethods.assert(fromBalance >= amount, "from address not enough balance");
             Storage.Put(Storage.CurrentContext, BalancePrefix.Concat(from), fromBalance - amount);
             BigInteger toBalance = balanceOf(to);
             Storage.Put(Storage.CurrentContext, BalancePrefix.Concat(to), toBalance + amount);
@@ -142,21 +140,9 @@ namespace NEP5
             for (var i = 0; i < args.Length; i++)
             {
                 State state = (State)args[i];
-                assert((bool)transfer(state.from, state.to, state.amount), "transfer failed");
+                BasicMethods.assert((bool)transfer(state.from, state.to, state.amount), "transfer failed");
             }
             return true;
-        }
-
-        private static void assert(bool condition, string msg)
-        {
-            if (!condition)
-            {
-                throw new Exception((msg.HexToBytes().Concat(" error ".HexToBytes())).AsString());
-            }
-        }
-        private static bool _isLegalAddress(byte[] addr)
-        {
-            return addr.Length == 20 && addr != AddressZero;
         }
     }
 }

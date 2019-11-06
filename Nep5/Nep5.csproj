@@ -45,6 +45,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\BasicMethods\BasicMethods.cs">
+      <Link>BasicMethods.cs</Link>
+    </Compile>
     <Compile Include="NEP5.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
